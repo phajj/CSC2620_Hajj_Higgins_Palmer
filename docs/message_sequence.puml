@@ -1,5 +1,18 @@
 @startuml 
 
+actor User
+participant Server
+participant Client
+participant Encrypter
+participant "Connected Clients" as cc
 
+User -> Client: Message
+Client -> Encrypter: Message
+Encrypter -> Client: Encrypted Message
+Client -> Server: Encrypted Message
+Server -> cc: Encrypted Message
+Client -> Encrypter: Encrypted Message
+Encrypter -> Client: Message
+Client -> User: Message
 
 @enduml
