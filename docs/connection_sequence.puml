@@ -1,0 +1,13 @@
+@startuml
+participant Server
+participant Client
+
+Client -> Server: Connection Request
+
+alt Correct Socket Connection
+    Server -> Client: Connection Succesful
+else Incorrect Socket Connection
+    Client -> Client: Server not found
+end
+
+@enduml

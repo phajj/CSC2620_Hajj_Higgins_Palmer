@@ -1,0 +1,26 @@
+@startuml
+actor User
+participant Server
+participant Client 
+participant "Log-in Handler" as LIH 
+
+'Authentication Request
+User -> Client: Authenticaiton Request
+Client -> LIH: Check Creditial Format
+alt Valid Creditials Format
+    LIH -> LIH: Valid Cred Format
+    alt Correct Creditials
+        LIH -> Client: Login Successful
+        Client -> Server: Connection Request
+        'See conection_sequence.puml for connection Request
+    else Incorrect Creditials
+        LIH -> Client: Invalid Creditials
+        Client -> User: Username or Password incorrect, please try again.
+    end
+else InValid Creditials
+    LIH -> Client: Invalid Creditial Format
+    Client -> User: Invalid creditial format, please try again.
+    User -> Client: Authenticaiton Request 
+end 
+
+@enduml
