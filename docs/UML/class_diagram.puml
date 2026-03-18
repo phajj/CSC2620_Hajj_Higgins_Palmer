@@ -1,0 +1,51 @@
+@startuml ClassDiagram
+
+class Server{
+    - ipAddress: String
+    - port: int
+    + startServer(): void
+    + stopServer(): void
+}
+
+class Client{
+    - ipAddress: String
+    - port: int
+    + connectToServer(): void
+    + disconnectFromServer(): void
+}
+
+class User{
+    - username: String
+    - password: String
+    + login(): boolean
+    + logout(): void
+}
+
+class Message{
+    - content: String
+    - timestamp: Date
+    + sendMessage(): void
+    + receiveMessage(): void
+}
+
+class Encrypter{
+    + encryptMessage(message: Message): String
+    + decryptMessage(encryptedMessage: String): Message
+}
+
+class "Communication Handler"{
+    + handleConnection(client: Client): void
+    + handleMessage(message: Message): void
+}
+
+class "Login Handler"{
+    + validateCredentials(username: String, password: String): boolean
+    + login(username: String, password: String): boolean
+}
+
+class "Credential Handler"{
+    + register(username: String, password: String): void
+    + lookup(username: String): String
+}
+
+@enduml
