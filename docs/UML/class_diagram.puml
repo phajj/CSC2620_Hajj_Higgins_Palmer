@@ -24,8 +24,7 @@ class User{
 class Message{
     - content: String
     - timestamp: Date
-    + sendMessage(): void
-    + receiveMessage(): void
+    - userName: String
 }
 
 class Encrypter{
