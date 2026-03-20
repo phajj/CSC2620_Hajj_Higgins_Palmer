@@ -5,18 +5,33 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 /**
  *  This class is responsible for encrypting and decrypting messages.
- * 
+ *  
  * @author Peter Hajj
  */
 
 public class Encrypter {
+    private KeyGenerator keyGen;
+    private SecretKey secretKey;
+
+    // Generate AES key
+    public Encrypter() {
+        try {
+            keyGen = KeyGenerator.getInstance("AES");
+            keyGen.init(256);
+            secretKey = keyGen.generateKey();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Encrypts a message using the AES algorithm.
+     *
+     * @param message The message to encrypt.
+     * @return The encrypted message.
+     */
     public String encryptMessage(String message){
         try {
-            // Generate AES key
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(256);
-            SecretKey secretKey = keyGen.generateKey();
-
             AESHelper aesHelper = new AESHelper();
             aesHelper.setKey(secretKey);
             
@@ -38,13 +53,19 @@ public class Encrypter {
         return null;
     }
     
-     // TODO: decryptMessage
+    /**
+     * Decrypts a message using the AES algorithm.
+     *
+     * @param encryptedMessage The message to decrypt.
+     * @return The decrypted message.
+     */
     public String decryptMessage(String encryptedMessage){
         try {
-            
+            AESHelper aesHelper = new AESHelper();
+            aesHelper.setKey(secretKey);
+            return aesHelper.decrypt(encryptedMessage);
         } catch (Exception e) {
-           
+            return "Error decrypting message: " + e.getMessage();
         }
-        return new String(encryptedMessage);
     }
 }

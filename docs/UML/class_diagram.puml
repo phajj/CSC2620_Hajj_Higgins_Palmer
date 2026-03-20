@@ -14,13 +14,6 @@ class Client{
     + disconnectFromServer(): void
 }
 
-class User{
-    - username: String
-    - password: String
-    + login(): boolean
-    + logout(): void
-}
-
 class Message{
     - content: String
     - timestamp: Date
@@ -45,6 +38,13 @@ class "Login Handler"{
 class "Credential Handler"{
     + register(username: String, password: String): void
     + lookup(username: String): String
+}
+
+class AESHelper{
+    - secretKey: SecretKey
+    + setKey(key: String): void
+    + encrypt(strToEncrypt: String): String
+    + decrypt(strToDecrypt: String): String
 }
 
 @enduml
