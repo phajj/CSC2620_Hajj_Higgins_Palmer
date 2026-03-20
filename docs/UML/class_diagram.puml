@@ -30,7 +30,7 @@ class Message{
 
 class Encrypter{
     + encryptMessage(message: Message): String
-    + decryptMessage(encryptedMessage: String): Message
+    + decryptMessage(encryptedMessage: Message): Message
 }
 
 class "Communication Handler"{
