@@ -17,11 +17,13 @@ public class ClientHandler extends Thread {
     private Socket socket;
     private BufferedReader reader;
     private MessageHelper messageHelper;
+    private PrintWriter sender;
 
     public ClientHandler(Socket client) throws IOException {
         this.socket = client;
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()) );
         this.messageHelper = new MessageHelper();
+        this.sender = new PrintWriter(socket.getOutputStream(), true);
     }
 
     @Override
@@ -34,7 +36,10 @@ public class ClientHandler extends Thread {
                 
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Connection lost.");
+        } finally {
+            Server.disconnectClient(this); // Remove this client from list of clients to be broatcast to
+            socket.close(); // close socket
         }
     }
 
@@ -44,6 +49,7 @@ public class ClientHandler extends Thread {
      * @param message Message to be transmitted
      */
     public void sendMessage(Message message) {
-        Server.broadcast(message);
+        String messageString = messageHelper.fromMessage(message);
+        sender.println(messageString); // Send message to client
     }
 }
