@@ -25,6 +25,15 @@ public class Server {
         }
     }
 
+    /**
+     * Gracefully handles client disconnects.
+     * 
+     * @param client Client to be disconnected.
+     */
+    public static void disconnectClient(ClientHandler client) {
+        connectedClients.remove(client);
+    }
+
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(PORT); // Start server
         System.out.println("Server starting on port " + PORT);
