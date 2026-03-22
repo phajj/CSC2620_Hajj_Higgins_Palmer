@@ -20,6 +20,7 @@ public class Client {
     private static Socket socket;
     private static LoginHandler loginHandler;
     private static String user;
+    private static Encrypter encrypter;
 
 
     /**
@@ -59,8 +60,9 @@ public class Client {
         if (login(username, password)) {
             user = username;
             socket = new Socket(serverIP, serverPort);
-            sender = new Sender(socket);
-            receiver = new Receiver(socket);
+            sender = new Sender(socket, encrypter);
+            receiver = new Receiver(socket, encrypter);
+            encrypter = new Encrypter();
             sender.start();
             receiver.start();
         }

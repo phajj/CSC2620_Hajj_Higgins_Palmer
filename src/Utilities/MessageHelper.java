@@ -3,6 +3,8 @@ package Utilities;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import client.Message;
+
 /**
  * This is a helper class for the Message class. It has methods for converting the Message object to and from a string.
  * 
@@ -19,7 +21,7 @@ public class MessageHelper {
      */
     public String fromMessage(Message message) {
         String content = message.getContent();
-        String username = message.getUsername();
+        String username = message.getUserName();
         LocalDateTime timestamp = message.getTimeStamp();
         String timestampString = formatter.format(timestamp);
         StringBuilder sb = new StringBuilder();

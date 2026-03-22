@@ -15,20 +15,23 @@ import Utilities.MessageHelper;
 public class Receiver extends Thread{
     BufferedReader receiver;
     Socket socket;
-    String messageString;
+    String encryptedMessage;
     MessageHelper messageHelper;
+    Encrypter encrypter;
 
-    public Receiver(Socket socket) throws IOException {
+    public Receiver(Socket socket, Encrypter encrypter) throws IOException {
         this.socket = socket;
         this.receiver = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.messageHelper = new MessageHelper();
+        this.encrypter = encrypter; 
     }
 
     @Override
     public void run() {
         try {
-            while ((messageString = receiver.readLine()) != null) {
-                Message message = messageHelper.toMessage(messageString);
+            while ((encryptedMessage = receiver.readLine()) != null) {
+                String messageString = encrypter.decryptMessage(encryptedMessage); // Decrypt message to string
+                Message message = messageHelper.toMessage(messageString); // Convert message string to a Message object
                 //Update gui and log file. e.g. gui.putMessage(), log.logMessage()
             }
         } catch (Exception e) {

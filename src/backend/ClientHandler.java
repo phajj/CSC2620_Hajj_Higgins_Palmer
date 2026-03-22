@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import Utilities.MessageHelper;
+import client.Message;
 
 /**
  * This class is a thread that handles exactly one socket and its operations
@@ -32,14 +33,18 @@ public class ClientHandler extends Thread {
             String messageString;
             while ((messageString = reader.readLine()) != null) {
                 Message message = messageHelper.toMessage(messageString);
-                sendMessage(message);
+                Server.broadcast(message);
                 
             }
         } catch (IOException e) {
             System.out.println("Connection lost.");
         } finally {
             Server.disconnectClient(this); // Remove this client from list of clients to be broatcast to
-            socket.close(); // close socket
+            try {
+                socket.close(); // Close socket
+            } catch (IOException e) {
+                e.printStackTrace();
+            } 
         }
     }
 
