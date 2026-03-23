@@ -3,6 +3,7 @@ package client;
 import Utilities.InvalidLoginException;
 import Utilities.RegistrationException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,7 +35,8 @@ public class LoginHandler {
      */
     public static LoginHandler getInstance() throws IOException {
         if (instance == null) {
-            return new LoginHandler();
+            instance = new LoginHandler();
+            return instance;
         }
         return instance;
     }
@@ -69,8 +71,9 @@ public class LoginHandler {
      * @param username Username for login
      * @param password Password for login
      * @return True if the username and password are of a valid form and the password is the password for the username
+     * @throws FileNotFoundException 
      */
-    boolean login(String username, String password) throws InvalidLoginException{
+    boolean login(String username, String password) throws InvalidLoginException, FileNotFoundException{
         
         if (!validateUsernameFormat(username)) {
             throw new InvalidLoginException("Invalid username format");
@@ -78,6 +81,10 @@ public class LoginHandler {
 
         if (!validatePasswordFormat(password)) {
             throw new InvalidLoginException("Invalid password format");
+        }
+
+        if (!credentialHandler.hasCredentials()) {
+            throw new InvalidLoginException("Please create a user before attempting to login");
         }
 
         String userPass = credentialHandler.lookup(username);

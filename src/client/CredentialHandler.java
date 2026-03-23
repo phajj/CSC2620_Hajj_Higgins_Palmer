@@ -2,6 +2,7 @@ package client;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,7 +19,6 @@ import Utilities.RegistrationException;
  */
 public class CredentialHandler {
     private final File credentialsFile;
-    private final Scanner reader;
     private final BufferedWriter writer;
     private static CredentialHandler instance;
     private HashMap<String, String> creds; 
@@ -32,8 +32,8 @@ public class CredentialHandler {
         }
 
         this.credentialsFile = new File(filename);
-        reader = new Scanner(credentialsFile);
-        writer = new BufferedWriter(new FileWriter(credentialsFile.getName()));
+        writer = new BufferedWriter(new FileWriter(credentialsFile.getName(), true));
+        creds = new HashMap<>();  
     }
 
     /**
@@ -45,20 +45,35 @@ public class CredentialHandler {
      */
     public static CredentialHandler getInstance(String filename) throws IOException {
         if (instance == null) {
-            return new CredentialHandler(filename);
+            instance = new CredentialHandler(filename);
+            return instance;
         }
         return instance;
     }
 
     /**
      * loads credentials into creds hashmap
+     * @throws FileNotFoundException 
      */
-    private void loadCredentials() {
-        String line = reader.nextLine();
-        while (line != null) {
+    private void loadCredentials() throws FileNotFoundException {
+        creds.clear();
+        Scanner reader = new Scanner(credentialsFile);
+        while (reader.hasNextLine()) {
+            String line = reader.nextLine();
             String[] credentials = line.split(","); // lines are formatted username,password
             creds.put(credentials[0], credentials[1]);
         }
+    }
+
+    /**
+     * This method checks if there are user credentials that can be checked.
+     
+     * @return True if there are user credentials, false otherwise.
+     * @throws FileNotFoundException 
+     */
+    public boolean hasCredentials() throws FileNotFoundException {
+        loadCredentials();
+        return !creds.isEmpty();
     }
 
     /**
@@ -71,11 +86,13 @@ public class CredentialHandler {
      */
     void register(String username, String password) throws RegistrationException, IOException{
         loadCredentials();
-        if (creds.containsKey(username)) {
+        if (hasCredentials() && creds.containsKey(username)) {
             throw new RegistrationException("Username " + username + " already exists");
         }
 
         writer.write(username + "," + password);
+        writer.newLine();
+        writer.flush();
     }
 
     /**
@@ -83,8 +100,9 @@ public class CredentialHandler {
      * 
      * @param username Username belonging to the password you want to lookup
      * @return password that belongs to the username
+     * @throws FileNotFoundException 
      */
-    String lookup(String username) {
+    String lookup(String username) throws FileNotFoundException {
         loadCredentials();
         return creds.get(username); 
     }

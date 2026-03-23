@@ -30,8 +30,10 @@ public class Client {
      * @param password Password for login
      * @return True if the username exists and the password is the correct password for the username
      * @throws InvalidLoginException If invalid credentialas
+     * @throws IOException 
      */
-    static boolean login(String username, String password) throws InvalidLoginException {
+    private static boolean login(String username, String password) throws InvalidLoginException, IOException {
+        loginHandler = LoginHandler.getInstance();
         return loginHandler.login(username, password);
     }
 
@@ -43,7 +45,8 @@ public class Client {
      * @throws RegistrationException If username already exists
      * @throws IOException File read/write errors
      */
-    static void register(String username, String password) throws RegistrationException, IOException {
+    public static void register(String username, String password) throws RegistrationException, IOException {
+        loginHandler = LoginHandler.getInstance();
         loginHandler.register(username, password);
     }
 
@@ -56,13 +59,13 @@ public class Client {
      * @throws UnknownHostException Incorrect server address
      * @throws IOException 
      */
-    static void connect(String username, String password) throws InvalidLoginException, UnknownHostException, IOException {
+    public static void connect(String username, String password) throws InvalidLoginException, UnknownHostException, IOException {
         if (login(username, password)) {
             user = username;
+            encrypter = new Encrypter();
             socket = new Socket(serverIP, serverPort);
             sender = new Sender(socket, encrypter);
             receiver = new Receiver(socket, encrypter);
-            encrypter = new Encrypter();
             sender.start();
             receiver.start();
         }
@@ -73,7 +76,7 @@ public class Client {
      * 
      * @param messageString Message to be sent
      */
-    static void send(String messageString) {
+    public static void send(String messageString) {
         Message message = new Message(messageString, user);
         sender.send(message);
     }
@@ -83,7 +86,7 @@ public class Client {
      * 
      * @throws IOException
      */
-    static void disconnect() throws IOException {
+    public static void disconnect() throws IOException {
         if (socket != null) {
             socket.close();
         }
