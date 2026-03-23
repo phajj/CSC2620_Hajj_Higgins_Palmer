@@ -36,16 +36,18 @@ public class Encrypter {
             aesHelper.setKey(secretKey);
             
             // Read file content of message 
-            BufferedReader fileReader = new BufferedReader(new FileReader(message));
-            StringBuilder fileContent = new StringBuilder();
-            String line;
-            while ((line = fileReader.readLine()) != null) {
-                fileContent.append(line).append("\n");
-            }
-            fileReader.close();
+            // BufferedReader fileReader = new BufferedReader(new FileReader(message));
+            // StringBuilder fileContent = new StringBuilder();
+            // String line;
+            // while ((line = fileReader.readLine()) != null) {
+            //     fileContent.append(line).append("\n");
+            // }
+            // fileReader.close();
 
-            // Encrypt Message file content and return it
-            return aesHelper.encrypt(fileContent.toString());
+            // // Encrypt Message file content and return it
+            // return aesHelper.encrypt(fileContent.toString());
+
+            return aesHelper.encrypt(message);
 
         } catch (Exception e) {
             e.printStackTrace();

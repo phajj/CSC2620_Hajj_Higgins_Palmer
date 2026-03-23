@@ -32,8 +32,8 @@ public class ClientHandler extends Thread {
         try {
             String messageString;
             while ((messageString = reader.readLine()) != null) {
-                Message message = messageHelper.toMessage(messageString);
-                Server.broadcast(message);
+                System.out.println("Received message from " + socket.getRemoteSocketAddress());
+                Server.broadcast(messageString);
                 
             }
         } catch (IOException e) {
@@ -53,8 +53,7 @@ public class ClientHandler extends Thread {
      * 
      * @param message Message to be transmitted
      */
-    public void sendMessage(Message message) {
-        String messageString = messageHelper.fromMessage(message);
+    public void sendMessage(String messageString) {
         sender.println(messageString); // Send message to client
     }
 }

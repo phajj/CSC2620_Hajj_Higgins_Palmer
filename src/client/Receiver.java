@@ -32,6 +32,8 @@ public class Receiver extends Thread{
             while ((encryptedMessage = receiver.readLine()) != null) {
                 String messageString = encrypter.decryptMessage(encryptedMessage); // Decrypt message to string
                 Message message = messageHelper.toMessage(messageString); // Convert message string to a Message object
+                System.out.println("Received message from : " + socket.getInetAddress());
+                System.out.println("Message: " + messageString);
                 //Update gui and log file. e.g. gui.putMessage(), log.logMessage()
             }
         } catch (Exception e) {

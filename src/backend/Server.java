@@ -21,7 +21,7 @@ public class Server {
      * 
      * @param message Message to be broadcast
      */
-    public synchronized static void broadcast(Message message) {
+    public synchronized static void broadcast(String message) {
         for (ClientHandler client : connectedClients) {
             client.sendMessage(message);
         }

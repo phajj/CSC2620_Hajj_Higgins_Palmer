@@ -11,7 +11,7 @@ import client.Message;
  * @author Jackson Higgins
  */
 public class MessageHelper {
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     /**
      * Converts a Message object to an easily parsable string
