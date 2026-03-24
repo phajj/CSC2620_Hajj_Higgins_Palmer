@@ -1,8 +1,12 @@
 package client;
 
+import java.io.IOException;
+
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import client.GUI;
+
+import Utilities.InvalidLoginException;
+import Utilities.RegistrationException;
 
 /**
  * This class is responsible for starting the client application.
@@ -10,6 +14,7 @@ import client.GUI;
  * @author Peter Hajj
  */
 public class App {
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             String username = JOptionPane.showInputDialog(
@@ -48,7 +53,11 @@ public class App {
             }
 
             // Create client GUI and start client application
-            new GUI(username);
+            try {
+                new GUI(username);
+            } catch (InvalidLoginException | IOException | RegistrationException e) {
+                e.printStackTrace();
+            }
         });
     }
 }

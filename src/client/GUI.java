@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 /**
  *  This class is responsible for creating the GUI for the client application.
  *  
- * @author Matthew Palmer & Peter Hajj
+ * @author Matthew Palmer & Peter Hajj & Jackson Higgins
  */
 public class GUI extends JFrame {
     
@@ -31,7 +31,7 @@ public class GUI extends JFrame {
     
     private String currentUser;
 
-    public GUI() {
+    public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
         setTitle("Git-Gabber”");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -51,8 +51,12 @@ public class GUI extends JFrame {
      * Creates the GUI and prefills the username field.
      *
      * @param username the username to place in the login field
+     * @throws RegistrationException 
+     * @throws IOException 
+     * @throws InvalidLoginException 
+     * @throws UnknownHostException 
      */
-    public GUI(String username) {
+    public GUI(String username) throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
         this(); // call the main constructor first
 
         if (username != null && !username.isBlank()) {
@@ -110,9 +114,22 @@ public class GUI extends JFrame {
         buttonPanel.add(registerBtn);
         buttonPanel.add(exitBtn);
 
-        loginBtn.addActionListener(e -> handleLogin());
-        registerBtn.addActionListener(e -> handleRegister());
+        loginBtn.addActionListener(e -> {
+            try {
+                handleLogin();
+            } catch (Exception error) {
+                showLoginError(error.getMessage());
+            }
+        });
+        registerBtn.addActionListener(e -> {
+            try {
+                handleRegister();
+            } catch (Exception error) {
+                showLoginError(error.getMessage());
+            }
+        });
         exitBtn.addActionListener(e -> handleExit());   
+        
 
         gbc.gridy++;
         panel.add(buttonPanel, gbc);
@@ -134,19 +151,43 @@ public class GUI extends JFrame {
         bottom.add(messageField, BorderLayout.CENTER);
 
         JButton sendBtn = new JButton("Send");
-        JButton clearBtn = new JButton("Clear");
         JButton logoutBtn = new JButton("Logout");
 
         JPanel controls = new JPanel();
         controls.add(connectionStatusLabel);
-        controls.add(clearBtn);
         controls.add(logoutBtn);
         controls.add(sendBtn);
 
         bottom.add(controls, BorderLayout.SOUTH);
         panel.add(bottom, BorderLayout.SOUTH);
 
+        sendBtn.addActionListener(e -> handleSend());
+        logoutBtn.addActionListener(e -> handleLogout());
+
         return panel;
+    }
+
+    /**
+     * Sends the message in the message field using Client.send(), then clears the field.
+     */
+    private void handleSend() {
+        String text = messageField.getText().trim();
+        if (!text.isEmpty()) {
+            Client.send(text);
+            messageField.setText("");
+        }
+    }
+
+    /**
+     * Handles logout: disconnects from the server and returns to the login screen.
+     */
+    private void handleLogout() {
+        try {
+            Client.disconnect();
+        } catch (IOException ignored) {
+            // ignore disconnect problems during logout
+        }
+        cardLayout.show(cardPanel, "login");
     }
 
     /**
@@ -155,74 +196,28 @@ public class GUI extends JFrame {
     private void handleLogin() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
-
-        if (username.isEmpty() || password.isEmpty()) {
-            showLoginError("Please enter both username and password.");
-            return;
-        }
-
         try {
-            loginStatusLabel.setText("Connecting...");
             Client.connect(username, password);
-
-            currentUser = username;
-            connectedUserLabel.setText("Logged in as: " + currentUser);
-            connectionStatusLabel.setText("Connected");
-            loginStatusLabel.setText("Login successful.");
-            passwordField.setText("");
             showChatScreen();
-        } catch (InvalidLoginException ex) {
-            showLoginError("Invalid username or password.");
-        } catch (UnknownHostException ex) {
-            showLoginError("Cannot reach server.");
-        } catch (IOException ex) {
-            showLoginError("Connection error: " + ex.getMessage());
+        } catch (InvalidLoginException | IOException e) {
+            showLoginError(e.getMessage());
         }
     }
 
     /**
      * Handles the registration process when the register button is pressed.
+     * @throws IOException 
+     * @throws RegistrationException 
      */
     private void handleRegister() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
-
-        if (username.isEmpty() || password.isEmpty()) {
-            showLoginError("Please enter both username and password.");
-            return;
+        try {
+            Client.register(username, password);
+        } catch (RegistrationException | IOException e) {
+            showLoginError(e.getMessage());
+            e.printStackTrace();
         }
-
-        loginStatusLabel.setForeground(new Color(90, 90, 90));
-        loginStatusLabel.setText("Registering...");
-
-        new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                Client.register(username, password);
-                return null;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    get();
-                    showLoginMessage("Registration successful. Please log in.");
-                    passwordField.setText("");
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                    showLoginError("Registration interrupted.");
-                } catch (ExecutionException ex) {
-                    Throwable cause = ex.getCause();
-                    if (cause instanceof RegistrationException) {
-                        showLoginError("Registration failed: " + cause.getMessage());
-                    } else if (cause instanceof IOException) {
-                        showLoginError("Network error: " + cause.getMessage());
-                    } else {
-                        showLoginError("Registration failed.");
-                    }
-                }
-            }
-        }.execute();
     }
 
     /** 
@@ -247,13 +242,13 @@ public class GUI extends JFrame {
      * @param message The error message to display
      */
 
-    private void showLoginError(String message) {
+    void showLoginError(String message) {
         loginStatusLabel.setForeground(new Color(160, 0, 0)); // dark red
         loginStatusLabel.setText(message);
     }
 
     // For testing the GUI
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(GUI::new);
+        //SwingUtilities.invokeLater(GUI::new);
     }
 }
