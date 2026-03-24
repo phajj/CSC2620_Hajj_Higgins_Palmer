@@ -5,7 +5,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-import client.Message;
 
 /**
  * Handles user connection and broadcasting to connected users.
