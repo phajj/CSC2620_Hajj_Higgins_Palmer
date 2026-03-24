@@ -6,9 +6,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-import Utilities.MessageHelper;
-import client.Message;
-
 /**
  * This class is a thread that handles exactly one socket and its operations
  * 
@@ -17,13 +14,11 @@ import client.Message;
 public class ClientHandler extends Thread {
     private Socket socket;
     private BufferedReader reader;
-    private MessageHelper messageHelper;
     private PrintWriter sender;
 
     public ClientHandler(Socket client) throws IOException {
         this.socket = client;
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()) );
-        this.messageHelper = new MessageHelper();
         this.sender = new PrintWriter(socket.getOutputStream(), true);
     }
 
