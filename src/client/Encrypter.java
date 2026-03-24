@@ -1,8 +1,11 @@
 package client;
 
 import java.io.*;
+import java.util.Base64;
+
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 /**
  *  This class is responsible for encrypting and decrypting messages.
  *  
@@ -10,15 +13,15 @@ import javax.crypto.SecretKey;
  */
 
 public class Encrypter {
-    private KeyGenerator keyGen;
     private SecretKey secretKey;
+    private String keyString;
 
     // Generate AES key
     public Encrypter() {
         try {
-            keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(256);
-            secretKey = keyGen.generateKey();
+            this.keyString = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="; // Never do this in prod. Hard coded 256 bit string for key generation
+            byte[] keyBytes = Base64.getDecoder().decode(keyString);
+            this.secretKey = new SecretKeySpec(keyBytes, "AES");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -34,18 +37,6 @@ public class Encrypter {
         try {
             AESHelper aesHelper = new AESHelper();
             aesHelper.setKey(secretKey);
-            
-            // Read file content of message 
-            // BufferedReader fileReader = new BufferedReader(new FileReader(message));
-            // StringBuilder fileContent = new StringBuilder();
-            // String line;
-            // while ((line = fileReader.readLine()) != null) {
-            //     fileContent.append(line).append("\n");
-            // }
-            // fileReader.close();
-
-            // // Encrypt Message file content and return it
-            // return aesHelper.encrypt(fileContent.toString());
 
             return aesHelper.encrypt(message);
 
