@@ -13,11 +13,10 @@ import Utilities.RegistrationException;
 public class App {
 
     public static void main(String[] args) {
-            try { // Start the GUI
-                new GUI();
-            } catch (InvalidLoginException | IOException | RegistrationException e) {
-                e.printStackTrace();
-            }
-
+        try { // Start the GUI
+            new GUI();
+        } catch (InvalidLoginException | IOException | RegistrationException e) {
+            e.printStackTrace();
+        }
     }
 }

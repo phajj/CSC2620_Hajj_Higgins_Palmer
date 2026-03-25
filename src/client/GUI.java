@@ -8,7 +8,6 @@ import Utilities.RegistrationException;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
 
 /**
  *  This class is responsible for creating the GUI for the client application.
@@ -26,10 +25,6 @@ public class GUI extends JFrame {
     // Chat UI components:
     private final JTextArea chatArea = new JTextArea(); 
     private final JTextField messageField = new JTextField();
-    private final JLabel connectedUserLabel = new JLabel("Not connected");
-    private final JLabel connectionStatusLabel = new JLabel("Offline");
-    
-    private String currentUser;
 
     public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
         setTitle("Git-Gabber");
@@ -154,7 +149,6 @@ public class GUI extends JFrame {
         JButton logoutBtn = new JButton("Logout");
 
         JPanel controls = new JPanel();
-        controls.add(connectionStatusLabel);
         controls.add(logoutBtn);
         controls.add(sendBtn);
 
@@ -229,15 +223,6 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Shows a login message.
-     * @param message The message to display
-     */
-    private void showLoginMessage(String message) {
-        loginStatusLabel.setForeground(new Color(0, 110, 0)); // dark green
-        loginStatusLabel.setText(message);
-    }
-
-    /**
      * Shows a login error message.
      * @param message The error message to display
      */
@@ -247,8 +232,11 @@ public class GUI extends JFrame {
         loginStatusLabel.setText(message);
     }
 
-    // For testing the GUI
-    public static void main(String[] args) {
-        //SwingUtilities.invokeLater(GUI::new);
+    /**
+     * Shows a chat message in the chat area.
+     * @param message The message to display
+     */
+    public void showChatMessage(String message) {
+        chatArea.append(message + "\n");
     }
 }
