@@ -32,7 +32,7 @@ public class GUI extends JFrame {
     private String currentUser;
 
     public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
-        setTitle("Git-Gabber”");
+        setTitle("Git-Gabber");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // center screen
