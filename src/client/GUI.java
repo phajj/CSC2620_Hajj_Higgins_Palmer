@@ -191,7 +191,7 @@ public class GUI extends JFrame {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
         try {
-            Client.connect(username, password);
+            Client.connect(username, password, this);
             showChatScreen();
         } catch (InvalidLoginException | IOException e) {
             showLoginError(e.getMessage());
@@ -236,7 +236,7 @@ public class GUI extends JFrame {
      * Shows a chat message in the chat area.
      * @param message The message to display
      */
-    public void showChatMessage(String message) {
-        chatArea.append(message + "\n");
+    public void showChatMessage(Message message) {
+        chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
     }
 }

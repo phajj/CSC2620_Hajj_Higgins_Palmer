@@ -18,12 +18,14 @@ public class Receiver extends Thread{
     String encryptedMessage;
     MessageHelper messageHelper;
     Encrypter encrypter;
+    GUI gui;
 
-    public Receiver(Socket socket, Encrypter encrypter) throws IOException {
+    public Receiver(Socket socket, Encrypter encrypter, GUI gui) throws IOException {
         this.socket = socket;
         this.receiver = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.messageHelper = new MessageHelper();
         this.encrypter = encrypter; 
+        this.gui = gui;
     }
 
     @Override
@@ -36,6 +38,8 @@ public class Receiver extends Thread{
                 System.out.println("Message: " + messageString);
                 //Update gui and log file. e.g. gui.putMessage(), log.logMessage()
                 
+                gui.showChatMessage(message); // Show the message in the chat area of the GUI
+
             }
         } catch (Exception e) {
             e.printStackTrace();
