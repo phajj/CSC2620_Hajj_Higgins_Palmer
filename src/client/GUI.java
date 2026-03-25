@@ -110,13 +110,15 @@ public class GUI extends JFrame {
         buttonPanel.add(exitBtn);
 
         loginBtn.addActionListener(e -> {
+            clearExceptions();
             try {
                 handleLogin();
             } catch (Exception error) {
                 showLoginError(error.getMessage());
             }
         });
-        registerBtn.addActionListener(e -> {
+        registerBtn.addActionListener(e -> {            
+            clearExceptions();            
             try {
                 handleRegister();
             } catch (Exception error) {
@@ -238,5 +240,9 @@ public class GUI extends JFrame {
      */
     public void showChatMessage(String message) {
         chatArea.append(message + "\n");
+    }
+
+    public void clearExceptions() {
+        loginStatusLabel.setText(" ");
     }
 }

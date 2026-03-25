@@ -89,7 +89,7 @@ public class LoginHandler {
 
         String userPass = credentialHandler.lookup(username);
         
-        if (!userPass.equals(password)) {
+        if (userPass == null || !userPass.equals(password)) {
             throw new InvalidLoginException("Username or password incorrect");
         }
 
