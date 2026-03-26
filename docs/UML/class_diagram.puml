@@ -1,50 +1,205 @@
 @startuml ClassDiagram
 
-class Server{
-    - ipAddress: String
-    - port: int
-    + startServer(): void
-    + stopServer(): void
+' ── Backend ─────────────────────────────────────────────
+package backend {
+
+    class Server {
+        - {static} connectedClients : ArrayList<ClientHandler>
+        - {static} PORT : int
+        + {static} broadcast(message : String) : void
+        + {static} disconnectClient(client : ClientHandler) : void
+        + {static} main(args : String[]) : void
+    }
+
+    class ClientHandler {
+        - socket : Socket
+        - reader : BufferedReader
+        - sender : PrintWriter
+        + ClientHandler(client : Socket)
+        + run() : void
+        + sendMessage(messageString : String) : void
+    }
 }
 
-class Client{
-    - ipAddress: String
-    - port: int
-    + connectToServer(): void
-    + disconnectFromServer(): void
+' ── Client ───────────────────────────────────────────────
+package client {
+
+    class App {
+        + {static} main(args : String[]) : void
+    }
+
+    class Client {
+        - {static} serverIP : String
+        - {static} serverPort : int
+        - {static} sender : Sender
+        - {static} receiver : Receiver
+        - {static} socket : Socket
+        - {static} loginHandler : LoginHandler
+        - {static} user : String
+        - {static} encrypter : Encrypter
+        - {static} login(username : String, password : String) : boolean
+        + {static} register(username : String, password : String) : void
+        + {static} connect(username : String, password : String, gui : GUI) : void
+        + {static} send(messageString : String) : void
+        + {static} disconnect() : void
+    }
+
+    class GUI {
+        - cardLayout : CardLayout
+        - cardPanel : JPanel
+        - usernameField : JTextField
+        - passwordField : JPasswordField
+        - loginStatusLabel : JLabel
+        - chatArea : JTextArea
+        - messageField : JTextField
+        - messages : List<Message>
+        + GUI()
+        + GUI(username : String)
+        + showChatMessage(message : Message) : void
+        + showLoginError(message : String) : void
+        + showLoginSuccess(message : String) : void
+        + clearExceptions() : void
+        - buildLoginPanel() : JPanel
+        - buildChatPanel() : JPanel
+        - handleLogin() : void
+        - handleRegister() : void
+        - handleSend() : void
+        - handleLogout() : void
+        - handleSaveHistory() : void
+        - handleExit() : void
+        - showChatScreen() : void
+    }
+
+    class LoginHandler {
+        - usernamePattern : Pattern
+        - passwordPattern : Pattern
+        - credentialsFileName : String
+        - {static} credentialHandler : CredentialHandler
+        - {static} instance : LoginHandler
+        + {static} getInstance() : LoginHandler
+        ~ validateUsernameFormat(username : String) : boolean
+        ~ validatePasswordFormat(password : String) : boolean
+        ~ login(username : String, password : String) : boolean
+        ~ register(username : String, password : String) : void
+    }
+
+    class CredentialHandler {
+        - credentialsFile : File
+        - writer : BufferedWriter
+        - {static} instance : CredentialHandler
+        - creds : HashMap<String, String>
+        + {static} getInstance(filename : String) : CredentialHandler
+        + hasCredentials() : boolean
+        ~ register(username : String, password : String) : void
+        ~ lookup(username : String) : String
+        - loadCredentials() : void
+    }
+
+    class Encrypter {
+        - secretKey : SecretKey
+        - keyString : String
+        + Encrypter()
+        + encryptMessage(message : String) : String
+        + decryptMessage(encryptedMessage : String) : String
+    }
+
+    class Sender {
+        - socket : Socket
+        - messageHelper : MessageHelper
+        - sender : PrintWriter
+        - encrypter : Encrypter
+        + Sender(socket : Socket, encrypter : Encrypter)
+        + send(message : Message) : void
+    }
+
+    class Receiver {
+        ~ receiver : BufferedReader
+        ~ socket : Socket
+        ~ encryptedMessage : String
+        ~ messageHelper : MessageHelper
+        ~ encrypter : Encrypter
+        ~ gui : GUI
+        + Receiver(socket : Socket, encrypter : Encrypter, gui : GUI)
+        + run() : void
+    }
+
+    class Message {
+        - content : String
+        - timeStamp : LocalDateTime
+        - userName : String
+        + Message(content : String, userName : String)
+        + Message(content : String, timeStamp : LocalDateTime, userName : String)
+        + getContent() : String
+        + setContent(content : String) : void
+        + getTimeStamp() : LocalDateTime
+        + setTimeStamp(timeStamp : LocalDateTime) : void
+        + getUserName() : String
+        + setUserName(userName : String) : void
+    }
+
+    class AESHelper {
+        - secretKey : SecretKey
+        + setKey(key : SecretKey) : void
+        + encrypt(data : String) : String
+        + decrypt(encryptedData : String) : String
+    }
 }
 
-class Message{
-    - content: String
-    - timestamp: Date
-    - userName: String
+' ── Utilities ────────────────────────────────────────────
+package Utilities {
+
+    class MessageHelper {
+        ~ formatter : DateTimeFormatter
+        + fromMessage(message : Message) : String
+        + toMessage(messageString : String) : Message
+    }
+
+    class InvalidLoginException {
+        + InvalidLoginException(message : String)
+    }
+
+    class RegistrationException {
+        + RegistrationException(message : String)
+    }
 }
 
-class Encrypter{
-    + encryptMessage(message: Message): String
-    + decryptMessage(encryptedMessage: Message): Message
-}
+' ── Relationships ─────────────────────────────────────────
 
-class "Communication Handler"{
-    + handleConnection(client: Client): void
-    + handleMessage(message: Message): void
-}
+' Entry point
+App ..> GUI : creates
 
-class "Login Handler"{
-    + validateCredentials(username: String, password: String): boolean
-    + login(username: String, password: String): boolean
-}
+' GUI ↔ Client
+GUI ..> Client : calls connect() / send() / disconnect() / register()
 
-class "Credential Handler"{
-    + register(username: String, password: String): void
-    + lookup(username: String): String
-}
+' Client orchestrates the session
+Client --> LoginHandler      : uses (singleton)
+Client --> Encrypter         : creates
+Client --> Sender            : creates & starts
+Client --> Receiver          : creates & starts (Observer)
+Client ..> Message           : creates
 
-class AESHelper{
-    - secretKey: SecretKey
-    + setKey(key: String): void
-    + encrypt(strToEncrypt: String): String
-    + decrypt(strToDecrypt: String): String
-}
+' Authentication chain
+LoginHandler --> CredentialHandler : delegates file I/O (singleton)
+LoginHandler ..> InvalidLoginException  : throws
+LoginHandler ..> RegistrationException  : throws
+CredentialHandler ..> RegistrationException : throws
+
+' Send path
+Sender --> Encrypter     : encryptMessage()
+Sender --> MessageHelper : fromMessage()
+Sender ..> Message       : receives
+
+' Receive path
+Receiver --> Encrypter     : decryptMessage()
+Receiver --> MessageHelper : toMessage()
+Receiver --> GUI           : showChatMessage()
+Receiver ..> Message       : produces
+
+' Encryption internals
+Encrypter ..> AESHelper : creates & uses
+
+' Server ↔ ClientHandler
+Server "1" *-- "0..*" ClientHandler : spawns / manages
+ClientHandler ..> Server : broadcast() / disconnectClient()
 
 @enduml

@@ -14,12 +14,15 @@ rectangle "Message Handling" {
     usecase "Receive Message" as UC5
 }
 
-U --> UC1
-U --> UC2   
-U --> UC3
+rectangle "Chat History" {
+    usecase "Save Chat History" as UC6
+}
 
+U --> UC1
+U --> UC2
+U --> UC3
 U --> UC4
 U --> UC5
-
+U --> UC6
 
 @enduml

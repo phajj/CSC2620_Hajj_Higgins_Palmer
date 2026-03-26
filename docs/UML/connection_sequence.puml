@@ -1,14 +1,53 @@
 @startuml ConnectionSequence
 
-participant Server
+title Client-Server Connection Sequence
+
+actor User
+participant GUI
 participant Client
+participant LoginHandler
+participant CredentialHandler
+participant Server
+participant ClientHandler
 
-Client -> Server: Connection Request
+User -> GUI : clicks Login
 
-alt Correct Socket Connection
-    Server -> Client: Connection Succesful
-else Incorrect Socket Connection
-    Client -> Client: Server not found
+GUI -> Client : connect(username, password, gui)
+
+Client -> LoginHandler : getInstance()
+Client -> LoginHandler : login(username, password)
+LoginHandler -> CredentialHandler : getInstance("credentials.txt")
+LoginHandler -> CredentialHandler : lookup(username)
+CredentialHandler --> LoginHandler : storedPassword
+
+alt Credentials valid
+    LoginHandler --> Client : true
+
+    Client -> Server : new Socket(serverIP, 5001)
+    Server -> ClientHandler : new ClientHandler(socket)
+    activate ClientHandler
+    ClientHandler -> ClientHandler : start() - listen for messages
+    deactivate ClientHandler
+
+    Client -> Client : new Encrypter()
+    Client -> Client : new Sender(socket, encrypter)
+    Client -> Client : new Receiver(socket, encrypter, gui)
+    Client -> Client : sender.start()
+    Client -> Client : receiver.start()
+
+    Client --> GUI : (returns normally)
+    GUI -> GUI : showChatScreen()
+
+else Credentials invalid
+    LoginHandler --> Client : throws InvalidLoginException
+    Client --> GUI : propagates exception
+    GUI -> GUI : showLoginError(message)
+    GUI -> User : displays error
+
+else Unknown host / IO error
+    Client --> GUI : throws UnknownHostException / IOException
+    GUI -> GUI : showLoginError(message)
+    GUI -> User : displays error
 end
 
 @enduml

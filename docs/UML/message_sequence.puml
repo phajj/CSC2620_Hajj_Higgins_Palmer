@@ -1,18 +1,46 @@
 @startuml MessageSequence
 
-actor User
-participant Server
-participant Client
-participant Encrypter
-participant "Connected Clients" as cc
+title Send & Receive Message Sequence
 
-User -> Client: Message
-Client -> Encrypter: Message
-Encrypter -> Client: Encrypted Message
-Client -> Server: Encrypted Message
-Server -> cc: Encrypted Message
-Client -> Encrypter: Encrypted Message
-Encrypter -> Client: Message
-Client -> User: Message
+actor Sender_User as "User A (Sender)"
+participant GUI_A as "GUI (Client A)"
+participant Client_A as "Client (A)"
+participant Sender as "Sender (Thread)"
+participant MessageHelper
+participant Encrypter_A as "Encrypter (A)"
+participant Server
+participant ClientHandler
+participant Encrypter_B as "Encrypter (B)"
+participant Receiver as "Receiver (Thread)"
+participant GUI_B as "GUI (Client B)"
+actor Receiver_User as "User B (Receiver)"
+
+' ── SEND PATH ─────────────────────────────────────────────
+Sender_User -> GUI_A : types message, clicks Send
+GUI_A -> Client_A : send(messageString)
+Client_A -> Client_A : new Message(messageString, user)
+Client_A -> Sender : send(message)
+Sender -> MessageHelper : fromMessage(message)
+MessageHelper --> Sender : serialized string\n"content|timestamp|username"
+Sender -> Encrypter_A : encryptMessage(serializedString)
+Encrypter_A --> Sender : encrypted (Base64 AES)
+Sender -> Server : write encrypted string to socket
+
+' ── SERVER BROADCAST ──────────────────────────────────────
+Server -> ClientHandler : (all connected ClientHandlers\nread from their socket)
+ClientHandler -> ClientHandler : reader.readLine() → encryptedString
+ClientHandler -> Server : broadcast(encryptedString)
+Server -> ClientHandler : sendMessage(encryptedString)\n[for each connected client]
+ClientHandler -> Receiver : write encrypted string to socket
+
+' ── RECEIVE PATH ──────────────────────────────────────────
+Receiver -> Receiver : receiver.readLine() → encryptedString
+Receiver -> Encrypter_B : decryptMessage(encryptedString)
+Encrypter_B --> Receiver : serialized plain string
+Receiver -> MessageHelper : toMessage(serializedString)
+MessageHelper --> Receiver : Message(content, timeStamp, userName)
+Receiver -> GUI_B : showChatMessage(message)
+GUI_B -> GUI_B : append to chatArea
+GUI_B -> Receiver_User : message displayed
 
 @enduml

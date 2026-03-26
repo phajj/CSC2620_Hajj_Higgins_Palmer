@@ -1,27 +1,82 @@
 @startuml LoginSequence
 
-actor User
-participant Server
-participant Client 
-participant "Log-in Handler" as LIH 
+title Login and Registration Sequence
 
-'Authentication Request
-User -> Client: Authenticaiton Request
-Client -> LIH: Check Creditial Format
-alt Valid Creditials Format
-    LIH -> LIH: Valid Cred Format
-    alt Correct Creditials
-        LIH -> Client: Login Successful
-        Client -> Server: Connection Request
-        'See conection_sequence.puml for connection Request
-    else Incorrect Creditials
-        LIH -> Client: Invalid Creditials
-        Client -> User: Username or Password incorrect, please try again.
+actor User
+participant GUI
+participant Client
+participant LoginHandler
+participant CredentialHandler
+
+' LOGIN FLOW
+group Login
+    User -> GUI : enters username and password, clicks Login
+    GUI -> Client : connect(username, password, gui)
+    Client -> LoginHandler : getInstance()
+    Client -> LoginHandler : login(username, password)
+
+    LoginHandler -> LoginHandler : validateUsernameFormat(username)
+    LoginHandler -> LoginHandler : validatePasswordFormat(password)
+
+    alt Invalid format
+        LoginHandler --> Client : throws InvalidLoginException
+        Client --> GUI : propagates exception
+        GUI -> GUI : showLoginError(message)
+        GUI -> User : displays format error
+    else Valid format
+        LoginHandler -> CredentialHandler : getInstance("credentials.txt")
+        LoginHandler -> CredentialHandler : lookup(username)
+        CredentialHandler --> LoginHandler : storedPassword (or null)
+
+        alt Passwords match
+            LoginHandler --> Client : true
+            Client -> Client : open socket, start Sender and Receiver
+            Client --> GUI : (returns normally)
+            GUI -> GUI : showChatScreen()
+            GUI -> User : chat screen shown
+        else No match / user not found
+            LoginHandler --> Client : throws InvalidLoginException
+            Client --> GUI : propagates exception
+            GUI -> GUI : showLoginError(message)
+            GUI -> User : displays credentials error
+        end
     end
-else InValid Creditials
-    LIH -> Client: Invalid Creditial Format
-    Client -> User: Invalid creditial format, please try again.
-    User -> Client: Authenticaiton Request 
-end 
+end
+
+' REGISTRATION FLOW
+group Registration
+    User -> GUI : enters username and password, clicks Register
+    GUI -> Client : register(username, password)
+    Client -> LoginHandler : getInstance()
+    Client -> LoginHandler : register(username, password)
+
+    LoginHandler -> LoginHandler : validateUsernameFormat(username)
+    LoginHandler -> LoginHandler : validatePasswordFormat(password)
+
+    alt Invalid format
+        LoginHandler --> Client : throws RegistrationException
+        Client --> GUI : propagates exception
+        GUI -> GUI : showLoginError(message)
+        GUI -> User : displays format error
+    else Valid format
+        LoginHandler -> CredentialHandler : getInstance("credentials.txt")
+        LoginHandler -> CredentialHandler : register(username, password)
+
+        alt Username already exists
+            CredentialHandler --> LoginHandler : throws RegistrationException
+            LoginHandler --> Client : propagates exception
+            Client --> GUI : propagates exception
+            GUI -> GUI : showLoginError(message)
+            GUI -> User : displays duplicate username error
+        else Registration successful
+            CredentialHandler -> CredentialHandler : write to credentials.txt
+            CredentialHandler --> LoginHandler : (returns)
+            LoginHandler --> Client : (returns)
+            Client --> GUI : (returns)
+            GUI -> GUI : showLoginSuccess("Registration successful")
+            GUI -> User : success message shown
+        end
+    end
+end
 
 @enduml
