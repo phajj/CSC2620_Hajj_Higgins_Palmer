@@ -84,28 +84,44 @@ public class GUI extends JFrame {
      * @return JPanel containing the login form
      */
     private JPanel buildLoginPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        // Add logo
+        ImageIcon icon = new ImageIcon("resources/logo.png");
+        Image image = icon.getImage();
+        Image scaledImage = image.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+        ImageIcon scaledIcon = new ImageIcon(scaledImage);
+        JLabel logoLabel = new JLabel(scaledIcon);
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        logoPanel.add(logoLabel);
+        panel.add(logoPanel);
+
+        // Form panel
+        JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
 
         // Layout settings for the login form
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.gridx = 0;
         gbc.gridy = 0;
-
-        panel.add(new JLabel("Username:"), gbc);
-        gbc.gridx = 1;
-        panel.add(usernameField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy++;
-        panel.add(new JLabel("Password:"), gbc);
-        gbc.gridx = 1;
-        panel.add(passwordField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy++;
+        JLabel welcomeLabel = new JLabel("Welcome to Git Gabber! Please sign in to continue:", SwingConstants.CENTER);
         gbc.gridwidth = 2;
-        panel.add(loginStatusLabel, gbc);
+        formPanel.add(welcomeLabel, gbc);
+        gbc.gridwidth = 1;
+        gbc.gridy = 1;
+        formPanel.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(usernameField, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        formPanel.add(new JLabel("Password:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(passwordField, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        formPanel.add(loginStatusLabel, gbc);
 
         JButton loginBtn = new JButton("Login");
         JButton registerBtn = new JButton("Register");
@@ -136,7 +152,9 @@ public class GUI extends JFrame {
         
 
         gbc.gridy++;
-        panel.add(buttonPanel, gbc);
+        formPanel.add(buttonPanel, gbc);
+
+        panel.add(formPanel);
 
         return panel;
     }
