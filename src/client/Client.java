@@ -59,13 +59,13 @@ public class Client {
      * @throws UnknownHostException Incorrect server address
      * @throws IOException 
      */
-    public static void connect(String username, String password) throws InvalidLoginException, UnknownHostException, IOException {
+    public static void connect(String username, String password, GUI gui) throws InvalidLoginException, UnknownHostException, IOException {
         if (login(username, password)) {
             user = username;
             encrypter = new Encrypter();
             socket = new Socket(serverIP, serverPort);
             sender = new Sender(socket, encrypter);
-            receiver = new Receiver(socket, encrypter);
+            receiver = new Receiver(socket, encrypter, gui);
             sender.start();
             receiver.start();
         }
