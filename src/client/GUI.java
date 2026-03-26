@@ -1,12 +1,18 @@
 package client;
 
-import javax.swing.*;
-import java.awt.*;
-
 import Utilities.InvalidLoginException;
 import Utilities.RegistrationException;
 
+import javax.swing.*;
+
+import java.awt.*;
 import java.io.IOException;
+import java.io.FileWriter;
+import java.io.File;
+import java.util.List;
+import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
 
 /**
@@ -25,6 +31,7 @@ public class GUI extends JFrame {
     // Chat UI components:
     private final JTextArea chatArea = new JTextArea(); 
     private final JTextField messageField = new JTextField();
+    private final List<Message> messages = new ArrayList<>();
 
     public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
         setTitle("Git-Gabber");
@@ -149,16 +156,21 @@ public class GUI extends JFrame {
 
         JButton sendBtn = new JButton("Send");
         JButton logoutBtn = new JButton("Logout");
+        JButton saveHistoryBtn = new JButton("Save History");
 
         JPanel controls = new JPanel();
         controls.add(logoutBtn);
         controls.add(sendBtn);
+        controls.add(saveHistoryBtn);
 
         bottom.add(controls, BorderLayout.SOUTH);
         panel.add(bottom, BorderLayout.SOUTH);
 
         sendBtn.addActionListener(e -> handleSend());
         logoutBtn.addActionListener(e -> handleLogout());
+        saveHistoryBtn.addActionListener(e -> handleSaveHistory());
+
+        messageField.addActionListener(e -> handleSend());
 
         return panel;
     }
@@ -187,6 +199,31 @@ public class GUI extends JFrame {
     }
 
     /**
+     * Handles saving the chat history to a file and writes it to a txt file.
+     */
+    private void handleSaveHistory() {
+        JFileChooser fileChooser = new JFileChooser();
+
+        // Generate a default filename with the current date and time
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yy HH-mm");
+        String timestamp = LocalDateTime.now().format(formatter);
+        fileChooser.setSelectedFile(new File("Git Gabber Chat History " + timestamp + ".txt"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
+                for (Message message : messages) { // Write message in format [timestamp] username: message
+                    writer.write("[" + message.getTimeStamp() + "] " 
+                        + message.getUserName() + ": " 
+                        + message.getContent() + "\n");
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Error saving file: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
      * Handles the login process when the login button is pressed.
      */
     private void handleLogin() {
@@ -210,6 +247,7 @@ public class GUI extends JFrame {
         String password = new String(passwordField.getPassword());
         try {
             Client.register(username, password);
+            showLoginSuccess("Account registered successfully");
         } catch (RegistrationException | IOException e) {
             showLoginError(e.getMessage());
             e.printStackTrace();
@@ -235,10 +273,20 @@ public class GUI extends JFrame {
     }
 
     /**
+     * Shows a login success message.
+     * @param message The success message to display
+     */
+    void showLoginSuccess(String message) {
+        loginStatusLabel.setForeground(new Color(0, 128, 0)); // green
+        loginStatusLabel.setText(message);
+    }
+
+    /**
      * Shows a chat message in the chat area.
      * @param message The message to display
      */
     public void showChatMessage(Message message) {
+        messages.add(message);
         chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
     }
 
