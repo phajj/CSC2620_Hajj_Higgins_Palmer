@@ -89,7 +89,7 @@ public class LoginHandler {
 
         String userPass = credentialHandler.lookup(username);
         
-        if (!userPass.equals(password)) {
+        if (userPass == null || !userPass.equals(password)) {
             throw new InvalidLoginException("Username or password incorrect");
         }
 
@@ -105,6 +105,11 @@ public class LoginHandler {
      * @throws IOException For file writing errors
      */
     void register(String username, String password) throws RegistrationException, IOException {
+        // Validates format of username/password
+        if (!validateUsernameFormat(username)) 
+            throw new RegistrationException("Invalid username format");
+        if (!validatePasswordFormat(password)) 
+            throw new RegistrationException("Invalid password format");
         credentialHandler.register(username, password);
     }
 }
