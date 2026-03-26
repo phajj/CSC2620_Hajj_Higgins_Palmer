@@ -102,12 +102,17 @@ public class GUI extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
 
         // Layout settings for the login form
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(5, 5, 25, 5);
         gbc.gridx = 0;
         gbc.gridy = 0;
         JLabel welcomeLabel = new JLabel("Welcome to Git Gabber! Please sign in to continue:", SwingConstants.CENTER);
         gbc.gridwidth = 2;
         formPanel.add(welcomeLabel, gbc);
+
+        // Reset insets for the rest of the components
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        // Add username and password fields with labels
         gbc.gridwidth = 1;
         gbc.gridy = 1;
         formPanel.add(new JLabel("Username:"), gbc);
