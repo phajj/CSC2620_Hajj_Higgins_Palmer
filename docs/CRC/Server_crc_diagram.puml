@@ -1,0 +1,23 @@
+@startuml Server_CRC
+
+title Server — CRC Diagram
+
+class Server {
+  == Responsibilities ==
+  Listen for incoming TCP connections on port 5001
+  Spawn a ClientHandler thread per accepted connection
+  Maintain the list of all currently connected clients
+  Broadcast a message to every connected client
+  Remove a client from the list upon disconnect
+  --
+  == Collaborators ==
+  ClientHandler
+}
+
+class ClientHandler {
+  (collaborator)
+}
+
+Server "1" *-- "0..*" ClientHandler : spawns / manages >
+
+@enduml

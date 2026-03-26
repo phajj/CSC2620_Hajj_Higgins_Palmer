@@ -1,0 +1,22 @@
+@startuml Encrypter_CRC
+
+title Encrypter — CRC Diagram
+
+class Encrypter {
+  == Responsibilities ==
+  Initialize and hold the AES-256 secret key
+  Encrypt a plaintext message string using AESHelper
+  Decrypt a ciphertext message string using AESHelper
+  Provide encrypt / decrypt operations to Sender and Receiver
+  --
+  == Collaborators ==
+  AESHelper
+}
+
+class AESHelper {
+  (collaborator)
+}
+
+Encrypter --> AESHelper : setKey(), encrypt(), decrypt() >
+
+@enduml

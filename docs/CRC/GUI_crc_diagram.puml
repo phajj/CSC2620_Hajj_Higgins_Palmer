@@ -1,0 +1,43 @@
+@startuml GUI_CRC
+
+title GUI — CRC Diagram
+
+class GUI {
+  == Responsibilities ==
+  Build and display the login panel (logo, fields, buttons)
+  Build and display the chat panel (message area, input, controls)
+  Collect credentials and delegate login to Client
+  Collect credentials and delegate registration to Client
+  Delegate outbound text messages to Client
+  Render incoming Message objects in the chat area
+  Show error and success status messages to the user
+  Switch between login and chat screens via CardLayout
+  Disconnect the client and return to the login screen on logout
+  Save the chat history to a timestamped text file
+  --
+  == Collaborators ==
+  Client
+  Message
+  InvalidLoginException
+  RegistrationException
+}
+
+class Client {
+  (collaborator)
+}
+class Message {
+  (collaborator)
+}
+class InvalidLoginException {
+  (collaborator)
+}
+class RegistrationException {
+  (collaborator)
+}
+
+GUI --> Client              : calls connect(), send(), disconnect(), register() >
+GUI --> Message             : renders in chat area >
+GUI ..> InvalidLoginException : catches & displays >
+GUI ..> RegistrationException : catches & displays >
+
+@enduml

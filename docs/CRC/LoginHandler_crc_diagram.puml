@@ -1,0 +1,35 @@
+@startuml LoginHandler_CRC
+
+title LoginHandler — CRC Diagram
+
+class LoginHandler {
+  == Responsibilities ==
+  Enforce Singleton instantiation
+  Validate username format via regex (1–20 word chars / hyphens)
+  Validate password format via regex (8–25 printable ASCII, no comma)
+  Authenticate a login attempt against stored credentials
+  Delegate new-user registration to CredentialHandler
+  Throw InvalidLoginException on bad credentials
+  Throw RegistrationException on duplicate username
+  --
+  == Collaborators ==
+  CredentialHandler
+  InvalidLoginException
+  RegistrationException
+}
+
+class CredentialHandler {
+  (collaborator)
+}
+class InvalidLoginException {
+  (collaborator)
+}
+class RegistrationException {
+  (collaborator)
+}
+
+LoginHandler --> CredentialHandler    : delegates file I/O >
+LoginHandler ..> InvalidLoginException : throws >
+LoginHandler ..> RegistrationException : throws >
+
+@enduml

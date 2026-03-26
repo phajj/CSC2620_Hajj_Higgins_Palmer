@@ -1,0 +1,46 @@
+@startuml Client_CRC
+
+title Client — CRC Diagram
+
+
+
+class Client {
+  == Responsibilities ==
+  Open a TCP socket connection to the chat server
+  Authenticate the user through LoginHandler
+  Register new user accounts through LoginHandler
+  Create and start Sender and Receiver threads
+  Wrap outbound text in a Message and pass to Sender
+  Close the socket on disconnect
+  --
+  == Collaborators ==
+  LoginHandler
+  Encrypter
+  Sender
+  Receiver
+  GUI
+}
+
+class LoginHandler {
+  (collaborator)
+}
+class Encrypter {
+  (collaborator)
+}
+class Sender {
+  (collaborator)
+}
+class Receiver {
+  (collaborator)
+}
+class GUI {
+  (collaborator)
+}
+
+Client --> LoginHandler : authenticates / registers via >
+Client --> Encrypter    : creates >
+Client --> Sender       : creates & starts >
+Client --> Receiver     : creates & starts >
+Client <.. GUI          : calls connect(), send(), disconnect() >
+
+@enduml
