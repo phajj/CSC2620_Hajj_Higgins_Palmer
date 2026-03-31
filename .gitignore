@@ -25,3 +25,8 @@ replay_pid*
 
 
 credentials.txt
+.settings
+target
+.classpath
+.project
+pom.xml
