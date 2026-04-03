@@ -1,6 +1,8 @@
 package client;
 
+import Utilities.ChatButtonFactory;
 import Utilities.InvalidLoginException;
+import Utilities.LoginButtonFactory;
 import Utilities.RegistrationException;
 
 import javax.swing.*;
@@ -21,6 +23,9 @@ import java.net.UnknownHostException;
  * @author Matthew Palmer & Peter Hajj & Jackson Higgins
  */
 public class GUI extends JFrame {
+
+  private final LoginButtonFactory loginBtnFactory = new LoginButtonFactory();
+  private final ChatButtonFactory chatBtnFactory = new ChatButtonFactory();
 
   private final CardLayout cardLayout = new CardLayout();
   private final JPanel cardPanel = new JPanel(cardLayout);
@@ -135,9 +140,9 @@ public class GUI extends JFrame {
     gbc.gridwidth = 2;
     formPanel.add(loginStatusLabel, gbc);
 
-    JButton loginBtn = new JButton("Login");
-    JButton registerBtn = new JButton("Register");
-    JButton exitBtn = new JButton("Exit");
+    JButton loginBtn = loginBtnFactory.getButton("Login");
+    JButton registerBtn = loginBtnFactory.getButton("Register");
+    JButton exitBtn = loginBtnFactory.getButton("Exit");
 
     JPanel buttonPanel = new JPanel();
     buttonPanel.add(loginBtn);
@@ -177,8 +182,27 @@ public class GUI extends JFrame {
    */
   private JPanel buildChatPanel() {
     JPanel panel = new JPanel(new BorderLayout());
-    JButton addEmoji = new JButton();
-    JButton addAttachment = new JButton();
+    JButton addEmoji = new JButton("");
+    JButton addAttachment = new JButton("");
+
+    // Add icons to emoji and attachment buttons
+    ImageIcon emojiIcon = new ImageIcon(
+        new ImageIcon("resources/happy-face.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+    addEmoji.setIcon(emojiIcon);
+    addEmoji.setBackground(Color.WHITE);
+    addEmoji.setBorder(BorderFactory.createEmptyBorder());
+    addEmoji.setContentAreaFilled(false);
+    addEmoji.setOpaque(true);
+    addEmoji.setRolloverEnabled(false);
+
+    ImageIcon attachmentIcon = new ImageIcon(
+        new ImageIcon("resources/attach-file.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+    addAttachment.setIcon(attachmentIcon);
+    addAttachment.setBackground(Color.WHITE);
+    addAttachment.setBorder(BorderFactory.createEmptyBorder());
+    addAttachment.setContentAreaFilled(false);
+    addAttachment.setOpaque(true);
+    addAttachment.setRolloverEnabled(false);
 
     chatArea.setEditable(false);
     panel.add(new JScrollPane(chatArea), BorderLayout.CENTER);
@@ -190,7 +214,7 @@ public class GUI extends JFrame {
         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     chatListScroll.setPreferredSize(new Dimension(160, 0));
 
-    JButton newChatBtn = new JButton("+ New Chat");
+    JButton newChatBtn = chatBtnFactory.getButton("+ New Chat");
     newChatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, newChatBtn.getPreferredSize().height));
     newChatBtn.addActionListener(e -> handleNewChat());
 
@@ -220,9 +244,9 @@ public class GUI extends JFrame {
     messageRow.add(messageButtons, BorderLayout.EAST);
     bottom.add(messageRow, BorderLayout.CENTER);
 
-    JButton sendBtn = new JButton("Send");
-    JButton logoutBtn = new JButton("Logout");
-    JButton saveHistoryBtn = new JButton("Save History");
+    JButton sendBtn = chatBtnFactory.getButton("Send");
+    JButton logoutBtn = chatBtnFactory.getButton("Logout");
+    JButton saveHistoryBtn = chatBtnFactory.getButton("Save History");
 
     JPanel buttons = new JPanel();
     buttons.add(logoutBtn);
@@ -247,8 +271,8 @@ public class GUI extends JFrame {
 
     // Notification panel
     JLabel invitationTextLabel = new JLabel();
-    JButton acceptButton = new JButton("Accept");
-    JButton declineButton = new JButton("Decline");
+    JButton acceptButton = chatBtnFactory.getButton("Accept");
+    JButton declineButton = chatBtnFactory.getButton("Decline");
 
     notificationPanel.setVisible(false); // Change to true when an notificatoin in received
     notificationPanel.add(invitationTextLabel);
@@ -407,7 +431,7 @@ public class GUI extends JFrame {
    * @param chatName the display name for the chat entry
    */
   public void addChat(String chatName) {
-    JButton chatBtn = new JButton(chatName);
+    JButton chatBtn = chatBtnFactory.getButton(chatName);
     chatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatBtn.getPreferredSize().height));
     chatBtn.addActionListener(e -> openChat(chatName));
     chatListPanel.add(chatBtn);
