@@ -453,6 +453,20 @@ public class GUI extends JFrame {
    * Implement when backend is ready.
    */
   private void handleNewChat() {
-    // TODO: prompt for chat name / recipient and send request to server
+    JPanel newChatPrompt = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JLabel label = new JLabel("Chat Name: ");
+    JTextField chatName = new JTextField(15);
+    newChatPrompt.add(label);
+    newChatPrompt.add(chatName);
+
+    int result = JOptionPane.showConfirmDialog(this, newChatPrompt,
+        "New Chat", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+    if (result == JOptionPane.OK_OPTION) {
+      String name = chatName.getText().trim();
+      if (!name.isEmpty()) {
+        // TODO: Send request to server
+      }
+    }
   }
 }
