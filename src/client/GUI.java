@@ -41,6 +41,7 @@ public class GUI extends JFrame {
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
+  private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
 
@@ -290,7 +291,7 @@ public class GUI extends JFrame {
   private void handleSend() {
     String text = messageField.getText().trim();
     if (!text.isEmpty()) {
-      Client.send(text);
+      Client.send(text, currentChat);
       messageField.setText("");
     }
   }
@@ -445,6 +446,7 @@ public class GUI extends JFrame {
    * @param chatName the chat to open
    */
   private void openChat(String chatName) {
+    currentChat = chatName;
     // TODO: load messages for chatName
   }
 
