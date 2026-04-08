@@ -82,8 +82,8 @@ public class Client {
      * 
      * @param messageString Message to be sent
      */
-    public static void send(String messageString) {
-        Message message = new Message(messageString, user);
+    public static void send(String messageString, String group) {
+        Message message = new Message(messageString, user, group);
         sender.send(message);
     }
 
