@@ -28,7 +28,8 @@ public class MessageHelper {
     String group = message.getGroup();
     StringBuilder sb = new StringBuilder();
 
-    sb.append(timestampString).append(",").append(username).append(",").append(content).append(group); // format of
+    sb.append(timestampString).append(",").append(username).append(",").append(content).append(",").append(group); // format
+                                                                                                                   // of
     // {timestamp},{username},{content},{gorup}
     // for easy parsing
 
