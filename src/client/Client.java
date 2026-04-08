@@ -19,6 +19,7 @@ public class Client {
     private static Receiver receiver;
     private static Socket socket;
     private static LoginHandler loginHandler;
+    private static ConnectionChecker connectionChecker;
     private static String user;
     private static Encrypter encrypter;
 
@@ -61,6 +62,9 @@ public class Client {
      */
     public static void connect(String username, String password, GUI gui) throws InvalidLoginException, UnknownHostException, IOException {
         if (login(username, password)) {
+            if (connectionChecker != null) {
+                connectionChecker.shutdown();
+            }
             user = username;
             encrypter = new Encrypter();
             socket = new Socket(serverIP, serverPort);
@@ -68,6 +72,8 @@ public class Client {
             receiver = new Receiver(socket, encrypter, gui);
             sender.start();
             receiver.start();
+            connectionChecker = new ConnectionChecker(sender, gui);
+            connectionChecker.start();
         }
     }
 
@@ -76,8 +82,8 @@ public class Client {
      * 
      * @param messageString Message to be sent
      */
-    public static void send(String messageString) {
-        Message message = new Message(messageString, user);
+    public static void send(String messageString, String group) {
+        Message message = new Message(messageString, user, group);
         sender.send(message);
     }
 
@@ -87,6 +93,9 @@ public class Client {
      * @throws IOException
      */
     public static void disconnect() throws IOException {
+        if (connectionChecker != null) {
+            connectionChecker.shutdown();
+        }
         if (socket != null) {
             socket.close();
         }

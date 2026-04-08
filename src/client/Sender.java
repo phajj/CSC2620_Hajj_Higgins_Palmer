@@ -11,27 +11,32 @@ import Utilities.MessageHelper;
  * 
  * @author Jackson Higgins
  */
-public class Sender extends Thread{
-    private Socket socket;
-    private MessageHelper messageHelper;
-    private PrintWriter sender;
-    private Encrypter encrypter;
+public class Sender extends Thread {
+  private Socket socket;
+  private MessageHelper messageHelper;
+  private PrintWriter sender;
+  private Encrypter encrypter;
 
-    public Sender(Socket socket, Encrypter encrypter) throws IOException {
-        this.socket = socket;
-        this.messageHelper = new MessageHelper();
-        this.sender = new PrintWriter(socket.getOutputStream(), true);
-        this.encrypter = encrypter;
-    }
+  public Sender(Socket socket, Encrypter encrypter) throws IOException {
+    this.socket = socket;
+    this.messageHelper = new MessageHelper();
+    this.sender = new PrintWriter(socket.getOutputStream(), true);
+    this.encrypter = encrypter;
+  }
 
-    /**
-     * Send a message to the broadcast server.
-     * 
-     * @param message message to be sent with username and timestamp metadata
-     */
-    public synchronized void send(Message message) {
-        String messageString = messageHelper.fromMessage(message);
-        String encryptedString = encrypter.encryptMessage(messageString);
-        sender.println(encryptedString); // Send message to server
-    }
+  /**
+   * Send a message to the broadcast server.
+   * 
+   * @param message message to be sent with username and timestamp metadata
+   */
+  public synchronized void send(Message message) {
+
+    String messageString = messageHelper.fromMessage(message);
+    String encryptedString = encrypter.encryptMessage(messageString);
+    sender.println(encryptedString); // Send message to server
+  }
+
+  public void ping() {
+    sender.println(":ping");
+  }
 }
