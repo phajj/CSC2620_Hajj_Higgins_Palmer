@@ -55,6 +55,17 @@ public class GroupManager {
   }
 
   /**
+   * Creates the group if it does not already exist.
+   *
+   * @param group The group name
+   */
+  public void ensureGroup(String group) {
+    if (!hasGroup(group)) {
+      addGroup(group);
+    }
+  }
+
+  /**
    * Remove a group.
    * Should only be used if there are no users in the group
    *
