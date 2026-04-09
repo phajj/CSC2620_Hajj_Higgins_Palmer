@@ -1,6 +1,7 @@
 package client;
 
 import Utilities.ChatButtonFactory;
+import Utilities.GroupManager;
 import Utilities.InvalidLoginException;
 import Utilities.LoginButtonFactory;
 import Utilities.RegistrationException;
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
 import java.util.List;
-import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
@@ -37,13 +37,15 @@ public class GUI extends JFrame {
   private final JTextArea chatArea = new JTextArea();
   private final JTextField messageField = new JTextField();
   private final JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-  private final List<Message> messages = new ArrayList<>();
+  private final GroupManager groupManager = new GroupManager();
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
+
+  private String clientUser;
 
   public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
     setTitle("Git-Gabber");
@@ -322,7 +324,8 @@ public class GUI extends JFrame {
     int result = fileChooser.showSaveDialog(this);
     if (result == JFileChooser.APPROVE_OPTION) {
       try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
-        for (Message message : messages) { // Write message in format [timestamp] username: message
+        for (Message message : groupManager.getGroupMessages(currentChat)) { // Write message in format [timestamp]
+                                                                             // username: message
           writer.write("[" + message.getTimeStamp() + "] "
               + message.getUserName() + ": "
               + message.getContent() + "\n");
@@ -343,6 +346,10 @@ public class GUI extends JFrame {
     try {
       Client.connect(username, password, this);
       setConnected(true);
+      this.clientUser = username;
+      groupManager.addGroup("default");
+      groupManager.addUser("default", username);
+      addChat("default");
       showChatScreen();
     } catch (InvalidLoginException | IOException e) {
       showLoginError(e.getMessage());
@@ -402,8 +409,10 @@ public class GUI extends JFrame {
    * @param message The message to display
    */
   public void showChatMessage(Message message) {
-    messages.add(message);
-    chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
+    groupManager.addMessage(message.getGroup(), message);
+    if (message.getGroup().equals(currentChat)) {
+      chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
+    }
   }
 
   public void clearExceptions() {
@@ -426,6 +435,20 @@ public class GUI extends JFrame {
   }
 
   /**
+   * Adds a user to a group in the GroupManager and updates the right sidebar if
+   * the group is the current chat.
+   *
+   * @param group    the group to add the user to
+   * @param username the user to add
+   */
+  public void addUserToChat(String group, String username) {
+    groupManager.addUser(group, username);
+    if (group.equals(currentChat)) {
+      userListModel.addElement(username);
+    }
+  }
+
+  /**
    * Adds a chat button to the left sidebar. Call this when a new chat is received
    * from the server.
    *
@@ -441,13 +464,29 @@ public class GUI extends JFrame {
   }
 
   /**
-   * Switches the chat area to the selected chat. Implement when backend is ready.
+   * Switches the chat area to the selected chat and reloads its message history
+   * and member list.
    *
    * @param chatName the chat to open
    */
   private void openChat(String chatName) {
     currentChat = chatName;
-    // TODO: load messages for chatName
+
+    chatArea.setText("");
+    List<Message> messages = groupManager.getGroupMessages(chatName);
+    if (messages != null) {
+      for (Message msg : messages) {
+        chatArea.append(msg.getUserName() + ": " + msg.getContent() + "\n");
+      }
+    }
+
+    userListModel.clear();
+    List<String> members = groupManager.getGroupMembers(chatName);
+    if (members != null) {
+      for (String member : members) {
+        userListModel.addElement(member);
+      }
+    }
   }
 
   /**
@@ -466,8 +505,10 @@ public class GUI extends JFrame {
 
     if (result == JOptionPane.OK_OPTION) {
       String name = chatName.getText().trim();
-      if (!name.isEmpty()) {
-        // TODO: Send request to server
+      if (!name.isEmpty() && !groupManager.hasGroup(name)) {
+        groupManager.addGroup(name);
+        groupManager.addUser(name, clientUser);
+        addChat(name);
       }
     }
   }
