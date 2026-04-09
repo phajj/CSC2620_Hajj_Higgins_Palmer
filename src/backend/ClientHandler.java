@@ -50,6 +50,7 @@ public class ClientHandler extends Thread {
         } else {
           String group = messageHelper.toMessage(encrypter.decryptMessage(messageString)).getGroup();
           System.out.println("Received message from " + socket.getRemoteSocketAddress());
+          Server.ensureGroupAndAddClient(group, this);
           Server.broadcast(messageString, group);
         }
 
