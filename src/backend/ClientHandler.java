@@ -45,7 +45,8 @@ public class ClientHandler extends Thread {
     try {
       String messageString;
       while ((messageString = reader.readLine()) != null) {
-        if (messageString.equals(":ping")) {
+        String decryptedMessage = encrypter.decryptMessage(messageString);
+        if (decryptedMessage.equals(":ping")) {
           sender.println("true"); // Alerts server is still online
         } else {
           String group = messageHelper.toMessage(encrypter.decryptMessage(messageString)).getGroup();

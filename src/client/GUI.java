@@ -298,6 +298,11 @@ public class GUI extends JFrame {
     }
   }
 
+  private void handleInvite(String invitedUser, String group) {
+    String inviteString = ":invite," + invitedUser + "," + group + "," + clientUser;
+    Client.send(inviteString, group);
+  }
+
   /**
    * Handles logout: disconnects from the server and returns to the login screen.
    */

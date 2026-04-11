@@ -37,6 +37,8 @@ public class Sender extends Thread {
   }
 
   public void ping() {
-    sender.println(":ping");
+    String ping = ":ping";
+    String encryptedPing = encrypter.encryptMessage(ping);
+    sender.println(encryptedPing);
   }
 }
