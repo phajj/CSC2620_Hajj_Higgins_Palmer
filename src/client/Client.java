@@ -97,6 +97,16 @@ public class Client {
     }
 
     /**
+     * Sends an invite for another user to join a group.
+     *
+     * @param invitedUser the username to invite
+     * @param group       the group to invite them to
+     */
+    public static void sendInvite(String invitedUser, String group) {
+        sender.invite(invitedUser, group, user);
+    }
+
+    /**
      * Closes connection between client and server.
      * 
      * @throws IOException

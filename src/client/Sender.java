@@ -46,4 +46,9 @@ public class Sender extends Thread {
     String leave = ":leave," + group + "," + username;
     sender.println(encrypter.encryptMessage(leave));
   }
+
+  public void invite(String invitedUser, String group, String inviter) {
+    String invite = ":invite," + invitedUser + "," + group + "," + inviter;
+    sender.println(encrypter.encryptMessage(invite));
+  }
 }

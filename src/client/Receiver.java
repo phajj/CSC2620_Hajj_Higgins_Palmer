@@ -49,6 +49,7 @@ public class Receiver extends Thread {
             String inviter = parts[3];
             gui.receiveInvite(group, inviter);
           }
+          continue;
         }
 
         Message message = messageHelper.toMessage(messageString); // Convert message string to a Message object
