@@ -40,6 +40,10 @@ public class ClientHandler extends Thread {
     this.groups.add(group);
   }
 
+  public void removeGroup(String group) {
+    this.groups.remove(group);
+  }
+
   @Override
   public void run() {
     try {
@@ -48,6 +52,10 @@ public class ClientHandler extends Thread {
         String decryptedMessage = encrypter.decryptMessage(messageString);
         if (decryptedMessage.equals(":ping")) {
           sender.println("true"); // Alerts server is still online
+        } else if (decryptedMessage.startsWith(":leave,")) {
+          String group = decryptedMessage.split(",")[1];
+          Server.leaveGroup(group, this);
+          removeGroup(group);
         } else {
           String group = messageHelper.toMessage(encrypter.decryptMessage(messageString)).getGroup();
           System.out.println("Received message from " + socket.getRemoteSocketAddress());

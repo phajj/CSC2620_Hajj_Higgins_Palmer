@@ -52,6 +52,22 @@ public class Server {
   /**
    * Create a new broadcast group
    */
+  /**
+   * Removes a client from a broadcast group. Deletes the group if it becomes empty.
+   *
+   * @param group  the group to leave
+   * @param client the client handler leaving the group
+   */
+  public synchronized static void leaveGroup(String group, ClientHandler client) {
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    if (clients != null) {
+      clients.remove(client);
+      if (clients.isEmpty()) {
+        broadcastGroups.remove(group);
+      }
+    }
+  }
+
   public static void createGroup(String groupName) {
     groupManager.ensureGroup(groupName);
     broadcastGroups.put(groupName, new ArrayList<>());
