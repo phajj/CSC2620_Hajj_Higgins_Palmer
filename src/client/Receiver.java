@@ -37,7 +37,20 @@ public class Receiver extends Thread {
           ConnectionChecker.setConnectionStatus(true);
           continue;
         }
+
         String messageString = encrypter.decryptMessage(encryptedMessage); // Decrypt message to string
+        String[] parts = messageString.split(",");
+
+        if (parts[0].equals(":invite")) {
+          String invitedUser = parts[1];
+
+          if (invitedUser.equals(gui.getUsername())) {
+            String group = parts[2];
+            String inviter = parts[3];
+            gui.receiveInvite(group, inviter);
+          }
+        }
+
         Message message = messageHelper.toMessage(messageString); // Convert message string to a Message object
         System.out.println("Received message from : " + socket.getInetAddress());
         System.out.println("Message: " + messageString);

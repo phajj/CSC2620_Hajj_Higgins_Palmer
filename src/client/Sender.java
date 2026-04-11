@@ -41,4 +41,9 @@ public class Sender extends Thread {
     String encryptedPing = encrypter.encryptMessage(ping);
     sender.println(encryptedPing);
   }
+
+  public void leave(String group, String username) {
+    String leave = ":leave," + group + "," + username;
+    sender.println(encrypter.encryptMessage(leave));
+  }
 }
