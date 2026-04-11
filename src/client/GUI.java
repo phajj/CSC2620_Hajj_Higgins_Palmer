@@ -53,6 +53,8 @@ public class GUI extends JFrame {
   private final JButton declineButton = chatBtnFactory.getButton("Decline");
   // Leave chat button:
   private final JButton leaveChatBtn = chatBtnFactory.getButton("Leave Chat");
+  // Invite user button:
+  private final JButton inviteUserBtn = chatBtnFactory.getButton("Invite User");
 
   private String clientUser;
 
@@ -295,9 +297,16 @@ public class GUI extends JFrame {
     leaveChatBtn.setVisible(false);
     leaveChatBtn.addActionListener(e -> handleLeaveChat());
 
+    inviteUserBtn.setVisible(false);
+    inviteUserBtn.addActionListener(e -> handleInviteUser());
+
+    JPanel topRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
+    topRightButtons.add(inviteUserBtn);
+    topRightButtons.add(leaveChatBtn);
+
     JPanel topBar = new JPanel(new BorderLayout());
     topBar.add(notificationPanel, BorderLayout.CENTER);
-    topBar.add(leaveChatBtn, BorderLayout.EAST);
+    topBar.add(topRightButtons, BorderLayout.EAST);
     panel.add(topBar, BorderLayout.NORTH);
 
     return panel;
@@ -316,14 +325,36 @@ public class GUI extends JFrame {
   }
 
   private void handleInvite(String invitedUser, String group) {
-    String inviteString = ":invite," + invitedUser + "," + group + "," + clientUser;
-    Client.send(inviteString, group);
+    Client.sendInvite(invitedUser, group);
+  }
+
+  /**
+   * Prompts the user for a username and invites them to the current chat.
+   */
+  private void handleInviteUser() {
+    JPanel prompt = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    prompt.add(new JLabel("Username: "));
+    JTextField usernameInput = new JTextField(15);
+    prompt.add(usernameInput);
+
+    int result = JOptionPane.showConfirmDialog(this, prompt,
+        "Invite to \"" + currentChat + "\"", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+    if (result == JOptionPane.OK_OPTION) {
+      String invitedUser = usernameInput.getText().trim();
+      if (!invitedUser.isEmpty()) {
+        handleInvite(invitedUser, currentChat);
+      }
+    }
   }
 
   /**
    * handles creating GUI invite element
    */
   public void receiveInvite(String group, String inviter) {
+    if (groupManager.hasGroup(group)) {
+      return;
+    }
     SwingUtilities.invokeLater(() -> {
       invitationTextLabel.setText(inviter + " invited you to join \"" + group + "\"");
 
@@ -520,7 +551,9 @@ public class GUI extends JFrame {
    */
   private void openChat(String chatName) {
     currentChat = chatName;
-    leaveChatBtn.setVisible(!chatName.equals("default"));
+    boolean nonDefault = !chatName.equals("default");
+    leaveChatBtn.setVisible(nonDefault);
+    inviteUserBtn.setVisible(nonDefault);
 
     chatArea.setText("");
     List<Message> messages = groupManager.getGroupMessages(chatName);
