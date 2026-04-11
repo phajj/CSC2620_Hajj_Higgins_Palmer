@@ -56,6 +56,8 @@ public class ClientHandler extends Thread {
           String group = decryptedMessage.split(",")[1];
           Server.leaveGroup(group, this);
           removeGroup(group);
+        } else if (decryptedMessage.startsWith(":invite,")) {
+          Server.broadcast(messageString, "default");
         } else {
           String group = messageHelper.toMessage(encrypter.decryptMessage(messageString)).getGroup();
           System.out.println("Received message from " + socket.getRemoteSocketAddress());
