@@ -12,6 +12,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,10 +41,18 @@ public class GUI extends JFrame {
   private final GroupManager groupManager = new GroupManager();
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
+  private final HashMap<String, JButton> chatButtons = new HashMap<>();
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
+
+  // Notification panel components:
+  private final JLabel invitationTextLabel = new JLabel();
+  private final JButton acceptButton = chatBtnFactory.getButton("Accept");
+  private final JButton declineButton = chatBtnFactory.getButton("Decline");
+  // Leave chat button:
+  private final JButton leaveChatBtn = chatBtnFactory.getButton("Leave Chat");
 
   private String clientUser;
 
@@ -78,6 +87,10 @@ public class GUI extends JFrame {
     if (username != null && !username.isBlank()) {
       usernameField.setText(username);
     }
+  }
+
+  public String getUsername() {
+    return clientUser;
   }
 
   /**
@@ -273,15 +286,19 @@ public class GUI extends JFrame {
     messageField.addActionListener(e -> handleSend());
 
     // Notification panel
-    JLabel invitationTextLabel = new JLabel();
-    JButton acceptButton = chatBtnFactory.getButton("Accept");
-    JButton declineButton = chatBtnFactory.getButton("Decline");
 
-    notificationPanel.setVisible(false); // Change to true when an notificatoin in received
+    notificationPanel.setVisible(false);
     notificationPanel.add(invitationTextLabel);
     notificationPanel.add(acceptButton);
     notificationPanel.add(declineButton);
-    panel.add(notificationPanel, BorderLayout.NORTH);
+
+    leaveChatBtn.setVisible(false);
+    leaveChatBtn.addActionListener(e -> handleLeaveChat());
+
+    JPanel topBar = new JPanel(new BorderLayout());
+    topBar.add(notificationPanel, BorderLayout.CENTER);
+    topBar.add(leaveChatBtn, BorderLayout.EAST);
+    panel.add(topBar, BorderLayout.NORTH);
 
     return panel;
   }
@@ -301,6 +318,32 @@ public class GUI extends JFrame {
   private void handleInvite(String invitedUser, String group) {
     String inviteString = ":invite," + invitedUser + "," + group + "," + clientUser;
     Client.send(inviteString, group);
+  }
+
+  /**
+   * handles creating GUI invite element
+   */
+  public void receiveInvite(String group, String inviter) {
+    SwingUtilities.invokeLater(() -> {
+      invitationTextLabel.setText(inviter + " invited you to join \"" + group + "\"");
+
+      // Remove any previously registered listeners before adding new ones
+      for (var l : acceptButton.getActionListeners()) acceptButton.removeActionListener(l);
+      for (var l : declineButton.getActionListeners()) declineButton.removeActionListener(l);
+
+      acceptButton.addActionListener(e -> {
+        if (!groupManager.hasGroup(group)) {
+          groupManager.addGroup(group);
+        }
+        groupManager.addUser(group, clientUser);
+        addChat(group);
+        notificationPanel.setVisible(false);
+      });
+
+      declineButton.addActionListener(e -> notificationPanel.setVisible(false));
+
+      notificationPanel.setVisible(true);
+    });
   }
 
   /**
@@ -463,6 +506,7 @@ public class GUI extends JFrame {
     JButton chatBtn = chatBtnFactory.getButton(chatName);
     chatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatBtn.getPreferredSize().height));
     chatBtn.addActionListener(e -> openChat(chatName));
+    chatButtons.put(chatName, chatBtn);
     chatListPanel.add(chatBtn);
     chatListPanel.revalidate();
     chatListPanel.repaint();
@@ -476,6 +520,7 @@ public class GUI extends JFrame {
    */
   private void openChat(String chatName) {
     currentChat = chatName;
+    leaveChatBtn.setVisible(!chatName.equals("default"));
 
     chatArea.setText("");
     List<Message> messages = groupManager.getGroupMessages(chatName);
@@ -491,6 +536,23 @@ public class GUI extends JFrame {
       for (String member : members) {
         userListModel.addElement(member);
       }
+    }
+  }
+
+  /**
+   * Handles leaving the current chat: notifies the server, removes the group
+   * locally, removes the sidebar button, and returns to the default chat.
+   */
+  private void handleLeaveChat() {
+    String groupToLeave = currentChat;
+    Client.leaveGroup(groupToLeave);
+    openChat("default");
+    groupManager.removeGroup(groupToLeave);
+    JButton btn = chatButtons.remove(groupToLeave);
+    if (btn != null) {
+      chatListPanel.remove(btn);
+      chatListPanel.revalidate();
+      chatListPanel.repaint();
     }
   }
 

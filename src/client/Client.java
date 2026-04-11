@@ -88,6 +88,15 @@ public class Client {
     }
 
     /**
+     * Notifies the server that this client is leaving a group.
+     *
+     * @param group the group to leave
+     */
+    public static void leaveGroup(String group) {
+        sender.leave(group, user);
+    }
+
+    /**
      * Closes connection between client and server.
      * 
      * @throws IOException
