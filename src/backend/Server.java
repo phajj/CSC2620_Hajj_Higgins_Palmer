@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import Utilities.GroupManager;
 
@@ -66,6 +67,27 @@ public class Server {
         broadcastGroups.remove(group);
       }
     }
+  }
+
+  /**
+   * Returns the usernames of all clients currently in a group.
+   * Handlers that have not yet sent their :enter message are excluded.
+   *
+   * @param group the group name
+   * @return list of usernames
+   */
+  public synchronized static List<String> getGroupUsernames(String group) {
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    List<String> usernames = new ArrayList<>();
+    if (clients != null) {
+      for (ClientHandler client : clients) {
+        String uname = client.getUsername();
+        if (!uname.isEmpty()) {
+          usernames.add(uname);
+        }
+      }
+    }
+    return usernames;
   }
 
   public static void createGroup(String groupName) {
