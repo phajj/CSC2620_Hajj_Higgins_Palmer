@@ -39,8 +39,20 @@ public class GroupManager {
    * @param user  The username to add
    */
   public void addUser(String group, String user) {
-    if (groupMembers.containsKey(group)) {
+    if (groupMembers.containsKey(group) && !groupMembers.get(group).contains(user)) {
       groupMembers.get(group).add(user);
+    }
+  }
+
+  /**
+   * Remove a user from a group
+   *
+   * @param user  the user
+   * @param group the group to remove the user from
+   */
+  public void removeUser(String group, String user) {
+    if (groupMembers.containsKey(group)) {
+      groupMembers.get(group).remove(user);
     }
   }
 
@@ -96,6 +108,9 @@ public class GroupManager {
   }
 
   public void addMessage(String group, Message message) {
-    groupMessages.get(group).add(message);
+    ArrayList<Message> messages = groupMessages.get(group);
+    if (messages != null) {
+      messages.add(message);
+    }
   }
 }
