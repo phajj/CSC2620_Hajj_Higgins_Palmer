@@ -5,6 +5,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+
+import Utilities.GroupManager;
 
 /**
  * Handles user connection and broadcasting to connected users.
@@ -12,7 +15,8 @@ import java.util.HashMap;
  * @author Jackson Higgins
  */
 public class Server {
-  private static final HashMap<String, ArrayList<ClientHandler>> broadcastGroups = new HashMap<>(); // Each entry in
+  private static final HashMap<String, ArrayList<ClientHandler>> broadcastGroups = new HashMap<>();
+  private static final GroupManager groupManager = new GroupManager();
   private static final int PORT = 5001;
   private static final String DEFAULTGROUP = "default";
 
@@ -22,7 +26,12 @@ public class Server {
    * @param message Message to be broadcast
    */
   public synchronized static void broadcast(String message, String group) {
-    for (ClientHandler client : broadcastGroups.get(group)) {
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    if (clients == null) {
+      System.out.println("Broadcast failed: group '" + group + "' does not exist.");
+      return;
+    }
+    for (ClientHandler client : clients) {
       client.sendMessage(message);
     }
   }
@@ -42,11 +51,67 @@ public class Server {
   }
 
   /**
-   * Create and new broadcast group
+   * Create a new broadcast group
    */
+  /**
+   * Removes a client from a broadcast group. Deletes the group if it becomes empty.
+   *
+   * @param group  the group to leave
+   * @param client the client handler leaving the group
+   */
+  public synchronized static void leaveGroup(String group, ClientHandler client) {
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    if (clients != null) {
+      clients.remove(client);
+      if (clients.isEmpty()) {
+        broadcastGroups.remove(group);
+      }
+    }
+  }
+
+  /**
+   * Returns the usernames of all clients currently in a group.
+   * Handlers that have not yet sent their :enter message are excluded.
+   *
+   * @param group the group name
+   * @return list of usernames
+   */
+  public synchronized static List<String> getGroupUsernames(String group) {
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    List<String> usernames = new ArrayList<>();
+    if (clients != null) {
+      for (ClientHandler client : clients) {
+        String uname = client.getUsername();
+        if (!uname.isEmpty()) {
+          usernames.add(uname);
+        }
+      }
+    }
+    return usernames;
+  }
+
   public static void createGroup(String groupName) {
-    ArrayList<ClientHandler> group = new ArrayList<>();
-    broadcastGroups.put(groupName, group);
+    groupManager.ensureGroup(groupName);
+    broadcastGroups.put(groupName, new ArrayList<>());
+  }
+
+  /**
+   * Ensures a group exists (via GroupManager) and adds the client to it if not
+   * already a member. Creates the group on demand when the first message arrives.
+   *
+   * @param group  the group name
+   * @param client the client handler to add
+   */
+  public synchronized static void ensureGroupAndAddClient(String group, ClientHandler client) {
+    groupManager.ensureGroup(group);
+    if (!broadcastGroups.containsKey(group)) {
+      broadcastGroups.put(group, new ArrayList<>());
+    }
+    ArrayList<ClientHandler> clients = broadcastGroups.get(group);
+    if (!clients.contains(client)) {
+      clients.add(client);
+      client.addGroup(group);
+    }
   }
 
   public static void main(String[] args) throws IOException {

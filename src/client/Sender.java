@@ -36,7 +36,54 @@ public class Sender extends Thread {
     sender.println(encryptedString); // Send message to server
   }
 
+  /**
+   * Send a ping to the server to check connection
+   */
   public void ping() {
-    sender.println(":ping");
+    String ping = ":ping";
+    String encryptedPing = encrypter.encryptMessage(ping);
+    sender.println(encryptedPing);
+  }
+
+  /**
+   * Notify the chat group that someone has joined the chat
+   *
+   * @param username user who joined the chat
+   * @param group    group that was joined
+   */
+  public void enter(String username, String group) {
+    String enter = ":enter," + username + "," + group;
+    String encryptedEnter = encrypter.encryptMessage(enter);
+    sender.println(encryptedEnter);
+  }
+
+  // Used for initial conneciton to default group only
+  public void enter(String username) {
+    String enter = ":enter," + username + ",default";
+    String encryptedEnter = encrypter.encryptMessage(enter);
+    sender.println(encryptedEnter);
+  }
+
+  /**
+   * Notify that a user has left a chat
+   *
+   * @param group    group that the user has left
+   * @param username user who has left
+   */
+  public void leave(String group, String username) {
+    String leave = ":leave," + group + "," + username;
+    sender.println(encrypter.encryptMessage(leave));
+  }
+
+  /**
+   * Invite a user to a chat
+   *
+   * @param invitedUser user who has been invited to the chat
+   * @param group       group the user was invited to
+   * @param inviter     the person who invited the user to the group
+   */
+  public void invite(String invitedUser, String group, String inviter) {
+    String invite = ":invite," + invitedUser + "," + group + "," + inviter;
+    sender.println(encrypter.encryptMessage(invite));
   }
 }

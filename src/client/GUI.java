@@ -1,6 +1,7 @@
 package client;
 
 import Utilities.ChatButtonFactory;
+import Utilities.GroupManager;
 import Utilities.InvalidLoginException;
 import Utilities.LoginButtonFactory;
 import Utilities.RegistrationException;
@@ -11,8 +12,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
@@ -37,13 +38,25 @@ public class GUI extends JFrame {
   private final JTextArea chatArea = new JTextArea();
   private final JTextField messageField = new JTextField();
   private final JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-  private final List<Message> messages = new ArrayList<>();
+  private final GroupManager groupManager = new GroupManager();
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
+  private final HashMap<String, JButton> chatButtons = new HashMap<>();
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
+
+  // Notification panel components:
+  private final JLabel invitationTextLabel = new JLabel();
+  private final JButton acceptButton = chatBtnFactory.getButton("Accept");
+  private final JButton declineButton = chatBtnFactory.getButton("Decline");
+  // Leave chat button:
+  private final JButton leaveChatBtn = chatBtnFactory.getButton("Leave Chat");
+  // Invite user button:
+  private final JButton inviteUserBtn = chatBtnFactory.getButton("Invite User");
+
+  private String clientUser;
 
   public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
     setTitle("Git-Gabber");
@@ -76,6 +89,10 @@ public class GUI extends JFrame {
     if (username != null && !username.isBlank()) {
       usernameField.setText(username);
     }
+  }
+
+  public String getUsername() {
+    return clientUser;
   }
 
   /**
@@ -271,15 +288,26 @@ public class GUI extends JFrame {
     messageField.addActionListener(e -> handleSend());
 
     // Notification panel
-    JLabel invitationTextLabel = new JLabel();
-    JButton acceptButton = chatBtnFactory.getButton("Accept");
-    JButton declineButton = chatBtnFactory.getButton("Decline");
 
-    notificationPanel.setVisible(false); // Change to true when an notificatoin in received
+    notificationPanel.setVisible(false);
     notificationPanel.add(invitationTextLabel);
     notificationPanel.add(acceptButton);
     notificationPanel.add(declineButton);
-    panel.add(notificationPanel, BorderLayout.NORTH);
+
+    leaveChatBtn.setVisible(false);
+    leaveChatBtn.addActionListener(e -> handleLeaveChat());
+
+    inviteUserBtn.setVisible(false);
+    inviteUserBtn.addActionListener(e -> handleInviteUser());
+
+    JPanel topRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
+    topRightButtons.add(inviteUserBtn);
+    topRightButtons.add(leaveChatBtn);
+
+    JPanel topBar = new JPanel(new BorderLayout());
+    topBar.add(notificationPanel, BorderLayout.CENTER);
+    topBar.add(topRightButtons, BorderLayout.EAST);
+    panel.add(topBar, BorderLayout.NORTH);
 
     return panel;
   }
@@ -294,6 +322,62 @@ public class GUI extends JFrame {
       Client.send(text, currentChat);
       messageField.setText("");
     }
+  }
+
+  private void handleInvite(String invitedUser, String group) {
+    Client.sendInvite(invitedUser, group);
+  }
+
+  /**
+   * Prompts the user for a username and invites them to the current chat.
+   */
+  private void handleInviteUser() {
+    JPanel prompt = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    prompt.add(new JLabel("Username: "));
+    JTextField usernameInput = new JTextField(15);
+    prompt.add(usernameInput);
+
+    int result = JOptionPane.showConfirmDialog(this, prompt,
+        "Invite to \"" + currentChat + "\"", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+    if (result == JOptionPane.OK_OPTION) {
+      String invitedUser = usernameInput.getText().trim();
+      if (!invitedUser.isEmpty()) {
+        handleInvite(invitedUser, currentChat);
+      }
+    }
+  }
+
+  /**
+   * handles creating GUI invite element
+   */
+  public void receiveInvite(String group, String inviter) {
+    if (groupManager.hasGroup(group)) {
+      return;
+    }
+    SwingUtilities.invokeLater(() -> {
+      invitationTextLabel.setText(inviter + " invited you to join \"" + group + "\"");
+
+      // Remove any previously registered listeners before adding new ones
+      for (var l : acceptButton.getActionListeners())
+        acceptButton.removeActionListener(l);
+      for (var l : declineButton.getActionListeners())
+        declineButton.removeActionListener(l);
+
+      acceptButton.addActionListener(e -> {
+        if (!groupManager.hasGroup(group)) {
+          groupManager.addGroup(group);
+        }
+        addChat(group);
+        openChat(group); // switch to the new chat so messages are sent to the right place
+        Client.enterGroup(group); // notifies server; :members reply will populate the user list
+        notificationPanel.setVisible(false);
+      });
+
+      declineButton.addActionListener(e -> notificationPanel.setVisible(false));
+
+      notificationPanel.setVisible(true);
+    });
   }
 
   /**
@@ -322,7 +406,8 @@ public class GUI extends JFrame {
     int result = fileChooser.showSaveDialog(this);
     if (result == JFileChooser.APPROVE_OPTION) {
       try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
-        for (Message message : messages) { // Write message in format [timestamp] username: message
+        for (Message message : groupManager.getGroupMessages(currentChat)) { // Write message in format [timestamp]
+                                                                             // username: message
           writer.write("[" + message.getTimeStamp() + "] "
               + message.getUserName() + ": "
               + message.getContent() + "\n");
@@ -343,6 +428,10 @@ public class GUI extends JFrame {
     try {
       Client.connect(username, password, this);
       setConnected(true);
+      this.clientUser = username;
+      groupManager.addGroup("default");
+      groupManager.addUser("default", username);
+      addChat("default");
       showChatScreen();
     } catch (InvalidLoginException | IOException e) {
       showLoginError(e.getMessage());
@@ -402,8 +491,10 @@ public class GUI extends JFrame {
    * @param message The message to display
    */
   public void showChatMessage(Message message) {
-    messages.add(message);
-    chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
+    groupManager.addMessage(message.getGroup(), message);
+    if (message.getGroup().equals(currentChat)) {
+      chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
+    }
   }
 
   public void clearExceptions() {
@@ -426,6 +517,58 @@ public class GUI extends JFrame {
   }
 
   /**
+   * Adds a user to a group in the GroupManager and updates the right sidebar if
+   * the group is the current chat.
+   *
+   * @param group    the group to add the user to
+   * @param username the user to add
+   */
+  public void addUserToChat(String group, String username) {
+    groupManager.addUser(group, username);
+    if (group.equals(currentChat)) {
+      SwingUtilities.invokeLater(() -> userListModel.addElement(username));
+    }
+  }
+
+  /**
+   * Remove a user from a group. This updates the gui to not display their name in
+   * the list of users in the chat
+   *
+   * @param username user being removed
+   * @param group    group to remove the user from
+   */
+  public void removeUserFromChat(String group, String username) {
+    groupManager.removeUser(group, username);
+    if (group.equals(currentChat)) {
+      SwingUtilities.invokeLater(() -> userListModel.removeElement(username));
+    }
+  }
+
+  /**
+   * Replaces the member list for a group with an authoritative list from the
+   * server. Updates the right sidebar if the group is currently open.
+   *
+   * @param group   the group whose member list should be replaced
+   * @param members the authoritative member list
+   */
+  public void setGroupMembers(String group, List<String> members) {
+    groupManager.ensureGroup(group);
+    List<String> current = groupManager.getGroupMembers(group);
+    current.clear();
+    for (String member : members) {
+      current.add(member);
+    }
+    if (group.equals(currentChat)) {
+      SwingUtilities.invokeLater(() -> {
+        userListModel.clear();
+        for (String member : members) {
+          userListModel.addElement(member);
+        }
+      });
+    }
+  }
+
+  /**
    * Adds a chat button to the left sidebar. Call this when a new chat is received
    * from the server.
    *
@@ -435,19 +578,56 @@ public class GUI extends JFrame {
     JButton chatBtn = chatBtnFactory.getButton(chatName);
     chatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatBtn.getPreferredSize().height));
     chatBtn.addActionListener(e -> openChat(chatName));
+    chatButtons.put(chatName, chatBtn);
     chatListPanel.add(chatBtn);
     chatListPanel.revalidate();
     chatListPanel.repaint();
   }
 
   /**
-   * Switches the chat area to the selected chat. Implement when backend is ready.
+   * Switches the chat area to the selected chat and reloads its message history
+   * and member list.
    *
    * @param chatName the chat to open
    */
   private void openChat(String chatName) {
     currentChat = chatName;
-    // TODO: load messages for chatName
+    boolean nonDefault = !chatName.equals("default");
+    leaveChatBtn.setVisible(nonDefault);
+    inviteUserBtn.setVisible(nonDefault);
+
+    chatArea.setText("");
+    List<Message> messages = groupManager.getGroupMessages(chatName);
+    if (messages != null) {
+      for (Message msg : messages) {
+        chatArea.append(msg.getUserName() + ": " + msg.getContent() + "\n");
+      }
+    }
+
+    userListModel.clear();
+    List<String> members = groupManager.getGroupMembers(chatName);
+    if (members != null) {
+      for (String member : members) {
+        userListModel.addElement(member);
+      }
+    }
+  }
+
+  /**
+   * Handles leaving the current chat: notifies the server, removes the group
+   * locally, removes the sidebar button, and returns to the default chat.
+   */
+  private void handleLeaveChat() {
+    String groupToLeave = currentChat;
+    Client.leaveGroup(groupToLeave);
+    openChat("default");
+    groupManager.removeGroup(groupToLeave);
+    JButton btn = chatButtons.remove(groupToLeave);
+    if (btn != null) {
+      chatListPanel.remove(btn);
+      chatListPanel.revalidate();
+      chatListPanel.repaint();
+    }
   }
 
   /**
@@ -466,8 +646,12 @@ public class GUI extends JFrame {
 
     if (result == JOptionPane.OK_OPTION) {
       String name = chatName.getText().trim();
-      if (!name.isEmpty()) {
-        // TODO: Send request to server
+      if (!name.isEmpty() && !groupManager.hasGroup(name)) {
+        groupManager.addGroup(name);
+        groupManager.addUser(name, clientUser);
+        addChat(name);
+        openChat(name);
+        Client.enterGroup(name); // registers this client with the server so it receives join/leave events
       }
     }
   }
