@@ -3,7 +3,7 @@ package client;
 import java.time.LocalDateTime;
 
 /**
- * This class represents a message in the secure chat application.
+ * This class represents a message in Git Gabber.
  * It contains the content of the message, the timestamp of when it was sent,
  * and the username of the sender.
  * 
