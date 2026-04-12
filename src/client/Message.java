@@ -1,12 +1,14 @@
 package client;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class represents a message in Git Gabber.
- * It contains the content of the message, the timestamp of when it was sent,
- * and the username of the sender.
- * 
+ * It contains the content of the message, the timestamp of when it was sent, 
+ * attachments and the username of the sender.
+ *
  * @author Peter Hajj
  */
 
@@ -15,6 +17,7 @@ public class Message {
   private LocalDateTime timeStamp;
   private String userName;
   private String group;
+  private List<Attachment> attachments; // null when no attachments
 
   // Constructor for creating a new message (used when sending messages)
   public Message(String content, String userName, String group) {
@@ -63,5 +66,24 @@ public class Message {
 
   public void setGroup(String group) {
     this.group = group;
+  }
+
+  public List<Attachment> getAttachments() {
+    return attachments;
+  }
+
+  public void setAttachments(List<Attachment> attachments) {
+    this.attachments = attachments;
+  }
+
+  public void addAttachment(Attachment attachment) {
+    if (attachments == null) {
+      attachments = new ArrayList<>();
+    }
+    attachments.add(attachment);
+  }
+
+  public boolean hasAttachments() {
+    return attachments != null && !attachments.isEmpty();
   }
 }

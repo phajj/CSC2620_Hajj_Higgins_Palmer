@@ -3,6 +3,7 @@ package Utilities;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import client.Attachment;
 import client.Message;
 
 /**
@@ -28,10 +29,15 @@ public class MessageHelper {
     String group = message.getGroup();
     StringBuilder sb = new StringBuilder();
 
-    sb.append(timestampString).append(",").append(username).append(",").append(content).append(",").append(group); // format
-                                                                                                                   // of
-    // {timestamp},{username},{content},{gorup}
-    // for easy parsing
+    // {timestamp},{username},{content},{group}| {att1}|{att2} etc
+    sb.append(timestampString).append(",").append(username).append(",").append(content).append(",").append(group);
+    
+    //for parsing:
+    if (message.hasAttachments()) { 
+      for (Attachment att : message.getAttachments()) {
+        sb.append("|").append(att.serialize()); 
+      }
+    }
 
     return sb.toString();
   }
@@ -43,7 +49,10 @@ public class MessageHelper {
    * @return Message object
    */
   public Message toMessage(String messageString) {
-    String[] parts = messageString.split(",", 4);
+    // Split on | to separate text messages from attachments
+    String[] segments = messageString.split("\\|");
+
+    String[] parts = segments[0].split(",", 4);
     String timeStampString = parts[0];
     String username = parts[1];
     String content = parts[2];
@@ -51,6 +60,11 @@ public class MessageHelper {
     LocalDateTime timeStamp = LocalDateTime.parse(timeStampString);
 
     Message message = new Message(content, timeStamp, username, group);
+
+    // Deserialize any attachment segments
+    for (int i = 1; i < segments.length; i++) {
+      message.addAttachment(Attachment.deserialize(segments[i]));
+    }
 
     return message;
   }
