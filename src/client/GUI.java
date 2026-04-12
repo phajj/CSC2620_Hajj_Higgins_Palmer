@@ -359,15 +359,18 @@ public class GUI extends JFrame {
       invitationTextLabel.setText(inviter + " invited you to join \"" + group + "\"");
 
       // Remove any previously registered listeners before adding new ones
-      for (var l : acceptButton.getActionListeners()) acceptButton.removeActionListener(l);
-      for (var l : declineButton.getActionListeners()) declineButton.removeActionListener(l);
+      for (var l : acceptButton.getActionListeners())
+        acceptButton.removeActionListener(l);
+      for (var l : declineButton.getActionListeners())
+        declineButton.removeActionListener(l);
 
       acceptButton.addActionListener(e -> {
         if (!groupManager.hasGroup(group)) {
           groupManager.addGroup(group);
         }
-        groupManager.addUser(group, clientUser);
         addChat(group);
+        openChat(group); // switch to the new chat so messages are sent to the right place
+        Client.enterGroup(group); // notifies server; :members reply will populate the user list
         notificationPanel.setVisible(false);
       });
 
@@ -523,7 +526,45 @@ public class GUI extends JFrame {
   public void addUserToChat(String group, String username) {
     groupManager.addUser(group, username);
     if (group.equals(currentChat)) {
-      userListModel.addElement(username);
+      SwingUtilities.invokeLater(() -> userListModel.addElement(username));
+    }
+  }
+
+  /**
+   * Remove a user from a group. This updates the gui to not display their name in
+   * the list of users in the chat
+   *
+   * @param username user being removed
+   * @param group    group to remove the user from
+   */
+  public void removeUserFromChat(String group, String username) {
+    groupManager.removeUser(group, username);
+    if (group.equals(currentChat)) {
+      SwingUtilities.invokeLater(() -> userListModel.removeElement(username));
+    }
+  }
+
+  /**
+   * Replaces the member list for a group with an authoritative list from the
+   * server. Updates the right sidebar if the group is currently open.
+   *
+   * @param group   the group whose member list should be replaced
+   * @param members the authoritative member list
+   */
+  public void setGroupMembers(String group, List<String> members) {
+    groupManager.ensureGroup(group);
+    List<String> current = groupManager.getGroupMembers(group);
+    current.clear();
+    for (String member : members) {
+      current.add(member);
+    }
+    if (group.equals(currentChat)) {
+      SwingUtilities.invokeLater(() -> {
+        userListModel.clear();
+        for (String member : members) {
+          userListModel.addElement(member);
+        }
+      });
     }
   }
 
@@ -609,6 +650,8 @@ public class GUI extends JFrame {
         groupManager.addGroup(name);
         groupManager.addUser(name, clientUser);
         addChat(name);
+        openChat(name);
+        Client.enterGroup(name); // registers this client with the server so it receives join/leave events
       }
     }
   }
