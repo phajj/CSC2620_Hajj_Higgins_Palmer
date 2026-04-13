@@ -85,11 +85,21 @@ public class Client {
 
   /**
    * Send a message to the broadcast server
-   * 
+   *
    * @param messageString Message to be sent
    */
   public static void send(String messageString, String group) {
     Message message = new Message(messageString, user, group);
+    sender.send(message);
+  }
+
+  /**
+   * Send a pre-built Message to the server. Use this when the message
+   * already has attachments added to it.
+   *
+   * @param message the Message to send
+   */
+  public static void send(Message message) {
     sender.send(message);
   }
 
