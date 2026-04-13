@@ -10,6 +10,6 @@ Git Gabber is a secure, multi-client chat app built in Java using Swing for the 
 - Java
 - Java Swing (GUI)
 - PUML 
-- TCP Sockets (Networking)
+- TCP Sockets 
 - Multithreading
 - Git & GitHub
