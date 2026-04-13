@@ -7,21 +7,32 @@ import Utilities.LoginButtonFactory;
 import Utilities.RegistrationException;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
+import javax.imageio.ImageIO;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
 
+
 /**
  * This class is responsible for creating the GUI for the client application.
  * 
- * @author Matthew Palmer & Peter Hajj & Jackson Higgins
+ * @author Peter Hajj 
+ * @author Jackson Higgins
+ * @author Matthew Palmer
  */
 public class GUI extends JFrame {
 
@@ -35,8 +46,10 @@ public class GUI extends JFrame {
   private final JPasswordField passwordField = new JPasswordField(15);
   private final JLabel loginStatusLabel = new JLabel(" ");
   // Chat UI components:
-  private final JTextArea chatArea = new JTextArea();
+  private final JTextPane chatArea = new JTextPane();
   private final JTextField messageField = new JTextField();
+  private final List<Attachment> pendingAttachments = new ArrayList<>();
+  private final JLabel attachmentStatusLabel = new JLabel(" ");
   private final JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
   private final GroupManager groupManager = new GroupManager();
   // Sidebar components (populate these when backend is ready):
@@ -57,6 +70,7 @@ public class GUI extends JFrame {
   private final JButton inviteUserBtn = chatBtnFactory.getButton("Invite User");
 
   private String clientUser;
+  private File lastAttachmentDirectory;
 
   public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
     setTitle("Git-Gabber");
@@ -261,6 +275,8 @@ public class GUI extends JFrame {
     messageButtons.add(addEmoji);
     messageRow.add(messageButtons, BorderLayout.EAST);
     bottom.add(messageRow, BorderLayout.CENTER);
+    attachmentStatusLabel.setBorder(BorderFactory.createEmptyBorder(2, 4, 0, 0));
+    bottom.add(attachmentStatusLabel, BorderLayout.NORTH);
 
     JButton sendBtn = chatBtnFactory.getButton("Send");
     JButton logoutBtn = chatBtnFactory.getButton("Logout");
@@ -284,6 +300,7 @@ public class GUI extends JFrame {
     sendBtn.addActionListener(e -> handleSend());
     logoutBtn.addActionListener(e -> handleLogout());
     saveHistoryBtn.addActionListener(e -> handleSaveHistory());
+    addAttachment.addActionListener(e -> handleAttachFile());
 
     messageField.addActionListener(e -> handleSend());
 
@@ -318,10 +335,21 @@ public class GUI extends JFrame {
    */
   private void handleSend() {
     String text = messageField.getText().trim();
-    if (!text.isEmpty()) {
-      Client.send(text, currentChat);
-      messageField.setText("");
+    boolean hasText = !text.isEmpty();
+    boolean hasAttachments = !pendingAttachments.isEmpty();
+
+    if (!hasText && !hasAttachments) return;
+
+    // Build a Message directly so attachments can be included
+    Message message = new Message(hasText ? text : "", clientUser, currentChat);
+    for (Attachment att : pendingAttachments) {
+      message.addAttachment(att);
     }
+
+    Client.send(message);
+    messageField.setText("");
+    pendingAttachments.clear();
+    attachmentStatusLabel.setText("");
   }
 
   private void handleInvite(String invitedUser, String group) {
@@ -410,7 +438,13 @@ public class GUI extends JFrame {
                                                                              // username: message
           writer.write("[" + message.getTimeStamp() + "] "
               + message.getUserName() + ": "
-              + message.getContent() + "\n");
+              + message.getContent());
+          if (message.hasAttachments()) {
+            for (Attachment attachment : message.getAttachments()) {
+              writer.write(" [file: " + attachment.getFileName() + "]");
+            }
+          }
+          writer.write("\n");
         }
       } catch (IOException e) {
         JOptionPane.showMessageDialog(this, "Error saving file: " + e.getMessage(), "Save Error",
@@ -493,7 +527,14 @@ public class GUI extends JFrame {
   public void showChatMessage(Message message) {
     groupManager.addMessage(message.getGroup(), message);
     if (message.getGroup().equals(currentChat)) {
-      chatArea.append(message.getUserName() + ": " + message.getContent() + "\n");
+      SwingUtilities.invokeLater(() -> {
+        appendToChat(message.getUserName() + ": " + message.getContent() + "\n");
+        if (message.hasAttachments()) {
+          for (Attachment att : message.getAttachments()) {
+            appendImageToChat(att.getData());
+          }
+        }
+      });
     }
   }
 
@@ -600,7 +641,12 @@ public class GUI extends JFrame {
     List<Message> messages = groupManager.getGroupMessages(chatName);
     if (messages != null) {
       for (Message msg : messages) {
-        chatArea.append(msg.getUserName() + ": " + msg.getContent() + "\n");
+        appendToChat(msg.getUserName() + ": " + msg.getContent() + "\n");
+        if (msg.hasAttachments()) {
+          for (Attachment att : msg.getAttachments()) {
+            appendImageToChat(att.getData());
+          }
+        }
       }
     }
 
@@ -653,6 +699,74 @@ public class GUI extends JFrame {
         openChat(name);
         Client.enterGroup(name); // registers this client with the server so it receives join/leave events
       }
+    }
+  }
+
+  /**
+   * Opens file select window and filters to PNG/JPG.
+   * Reads the selected file and queues it as an attachment.
+   */
+  private void handleAttachFile() {
+    JFileChooser chooser = new JFileChooser(lastAttachmentDirectory);
+    // Filter file type
+    chooser.setFileFilter(new FileNameExtensionFilter("Images (PNG, JPG)", "png", "jpg", "jpeg"));
+    if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+    File file = chooser.getSelectedFile();
+    lastAttachmentDirectory = file.getParentFile();
+    try {
+      byte[] data = Files.readAllBytes(file.toPath());
+      String name = file.getName();
+      String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
+      String type = ext.equals("png") ? Attachment.PNG : Attachment.JPG;
+      pendingAttachments.add(new Attachment(name, type, data));
+
+      // Show all queued file names above the message input
+      StringBuilder names = new StringBuilder();
+      for (Attachment att : pendingAttachments) {
+        if (names.length() > 0) names.append(", ");
+        names.append(att.getFileName());
+      }
+      attachmentStatusLabel.setText("Attached: " + names);
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(this, "Could not read file: " + e.getMessage(),
+          "Attachment Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  /**
+   * Appends plain text to the chat pane and scrolls to the bottom.
+   */
+  private void appendToChat(String text) {
+    StyledDocument doc = chatArea.getStyledDocument();
+    try {
+      doc.insertString(doc.getLength(), text, null);
+    } catch (BadLocationException e) {
+      e.printStackTrace();
+    }
+    chatArea.setCaretPosition(doc.getLength());
+  }
+
+  /**
+   * Decodes raw image data, scales the image to a >= width of 200px, and places it in the chat pane.
+   */
+  private void appendImageToChat(byte[] data) {
+    try {
+      BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+      if (img == null) {
+        appendToChat("[Image]\n");
+        return;
+      }
+      int maxWidth = 200;
+      int w = Math.min(img.getWidth(), maxWidth);
+      int h = (int) (img.getHeight() * ((double) w / img.getWidth()));
+      Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+      JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+      chatArea.setCaretPosition(chatArea.getDocument().getLength());
+      chatArea.insertComponent(imgLabel);
+      appendToChat("\n");
+    } catch (IOException e) {
+      appendToChat("[Image could not be displayed]\n");
     }
   }
 }
