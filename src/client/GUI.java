@@ -437,7 +437,13 @@ public class GUI extends JFrame {
                                                                              // username: message
           writer.write("[" + message.getTimeStamp() + "] "
               + message.getUserName() + ": "
-              + message.getContent() + "\n");
+              + message.getContent());
+          if (message.hasAttachments()) {
+            for (Attachment attachment : message.getAttachments()) {
+              writer.write(" [file: " + attachment.getFileName() + "]");
+            }
+          }
+          writer.write("\n");
         }
       } catch (IOException e) {
         JOptionPane.showMessageDialog(this, "Error saving file: " + e.getMessage(), "Save Error",
