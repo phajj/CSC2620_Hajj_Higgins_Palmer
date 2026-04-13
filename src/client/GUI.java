@@ -664,16 +664,12 @@ public class GUI extends JFrame {
    * locally, removes the sidebar button, and returns to the default chat.
    */
   private void handleLeaveChat() {
-    String groupToLeave = currentChat;
-    Client.leaveGroup(groupToLeave);
+    Client.leaveGroup(currentChat);
+    groupManager.removeGroup(currentChat);
+    chatListPanel.remove(chatButtons.get(currentChat));
+    chatListPanel.revalidate();
+    chatListPanel.repaint();
     openChat("default");
-    groupManager.removeGroup(groupToLeave);
-    JButton btn = chatButtons.remove(groupToLeave);
-    if (btn != null) {
-      chatListPanel.remove(btn);
-      chatListPanel.revalidate();
-      chatListPanel.repaint();
-    }
   }
 
   /**
@@ -692,12 +688,10 @@ public class GUI extends JFrame {
 
     if (result == JOptionPane.OK_OPTION) {
       String name = chatName.getText().trim();
-      if (!name.isEmpty() && !groupManager.hasGroup(name)) {
-        groupManager.addGroup(name);
-        groupManager.addUser(name, clientUser);
+      if (!name.isEmpty()) {
+        Client.createGroup(name);
         addChat(name);
         openChat(name);
-        Client.enterGroup(name); // registers this client with the server so it receives join/leave events
       }
     }
   }
@@ -769,4 +763,5 @@ public class GUI extends JFrame {
       appendToChat("[Image could not be displayed]\n");
     }
   }
+
 }

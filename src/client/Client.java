@@ -145,4 +145,9 @@ public class Client {
       socket.close();
     }
   }
+
+  public static void createGroup(String name) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'createGroup'");
+  }
 }

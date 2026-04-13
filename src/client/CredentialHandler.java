@@ -63,6 +63,7 @@ public class CredentialHandler {
             String[] credentials = line.split(","); // lines are formatted username,password
             creds.put(credentials[0], credentials[1]);
         }
+        reader.close();
     }
 
     /**
