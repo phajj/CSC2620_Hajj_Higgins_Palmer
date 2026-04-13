@@ -70,6 +70,7 @@ public class GUI extends JFrame {
   private final JButton inviteUserBtn = chatBtnFactory.getButton("Invite User");
 
   private String clientUser;
+  private File lastAttachmentDirectory;
 
   public GUI() throws UnknownHostException, InvalidLoginException, IOException, RegistrationException {
     setTitle("Git-Gabber");
@@ -706,12 +707,13 @@ public class GUI extends JFrame {
    * Reads the selected file and queues it as an attachment.
    */
   private void handleAttachFile() {
-    JFileChooser chooser = new JFileChooser();
+    JFileChooser chooser = new JFileChooser(lastAttachmentDirectory);
     // Filter file type
     chooser.setFileFilter(new FileNameExtensionFilter("Images (PNG, JPG)", "png", "jpg", "jpeg"));
     if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
 
     File file = chooser.getSelectedFile();
+    lastAttachmentDirectory = file.getParentFile();
     try {
       byte[] data = Files.readAllBytes(file.toPath());
       String name = file.getName();
