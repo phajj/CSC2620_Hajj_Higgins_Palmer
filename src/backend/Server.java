@@ -119,7 +119,7 @@ public class Server {
     broadcastGroups.put(DEFAULTGROUP, defaultList);
     ServerSocket serverSocket = new ServerSocket(PORT); // Start server
     System.out.println("Server starting on port " + PORT);
-     serverSocket.close();
+     
 
     // Loop accepts client connections and spins up a new thread for each as they
     // connect
