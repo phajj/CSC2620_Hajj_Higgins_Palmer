@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import client.Encrypter;
-import client.Message;
 import Utilities.MessageHelper;
 
 /**
@@ -119,4 +118,12 @@ public class ClientHandler extends Thread {
   public void sendMessage(String messageString) {
     sender.println(messageString); // Send message to client
   }
+  /**
+   * This method will integrate emoji support into the message sending process. It will take a message string, convert any emoji codes to their corresponding unicode characters, and then send the modified message string to the client.
+   * @param messageString The original message string that may contain emoji codes
+   */
+  public void sendMessageWithEmoji(String messageString) {
+    String messageWithEmoji = messageHelper.convertEmojiCodes(messageString);
+    sender.println(messageWithEmoji); // Send message with emojis to client
+}
 }

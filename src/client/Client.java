@@ -45,7 +45,7 @@ public class Client {
    * 
    * @param username Username to be registered
    * @param password Password to be registered
-   * @throws RegistrationException If username already exists
+   * @throws RegistrationException If username and/or password already exists
    * @throws IOException           File read/write errors
    */
   public static void register(String username, String password) throws RegistrationException, IOException {

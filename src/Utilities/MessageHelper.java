@@ -68,4 +68,12 @@ public class MessageHelper {
 
     return message;
   }
+
+  public String convertEmojiCodes(String messageString) {
+    // Simple implementation: replace ":smile:" with the corresponding unicode character
+    // In a real implementation, you would want a more robust solution, possibly using regex and a map of codes to unicode
+    return messageString.replace(":smile:", "\uD83D\uDE04")
+                        .replace(":sad:", "\uD83D\uDE1E")
+                        .replace(":heart:", "\u2764\uFE0F");
+  }
 }
