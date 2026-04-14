@@ -12,13 +12,11 @@ import Utilities.MessageHelper;
  * @author Jackson Higgins
  */
 public class Sender extends Thread {
-  private Socket socket;
   private MessageHelper messageHelper;
   private PrintWriter sender;
   private Encrypter encrypter;
 
   public Sender(Socket socket, Encrypter encrypter) throws IOException {
-    this.socket = socket;
     this.messageHelper = new MessageHelper();
     this.sender = new PrintWriter(socket.getOutputStream(), true);
     this.encrypter = encrypter;

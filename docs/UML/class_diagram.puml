@@ -4,10 +4,15 @@
 package backend {
 
     class Server {
-        - {static} connectedClients : ArrayList<ClientHandler>
+        - {static} broadcastGroups : HashMap<String, ArrayList<ClientHandler>>
         - {static} PORT : int
-        + {static} broadcast(message : String) : void
+        - {static} DEFAULTGROUP : String
+        - {static} groupManager : GroupManager
+        + {static} broadcast(message : String, group : String) : void
         + {static} disconnectClient(client : ClientHandler) : void
+        + {static} leaveGroup(group : String, client : ClientHandler) : void
+        + {static} getGroupUsernames(group : String) : List<String>
+        + {static} ensureGroupAndAddClient(group : String, client : ClientHandler) : void
         + {static} main(args : String[]) : void
     }
 
@@ -15,9 +20,17 @@ package backend {
         - socket : Socket
         - reader : BufferedReader
         - sender : PrintWriter
+        - encrypter : Encrypter
+        - messageHelper : MessageHelper
+        - groups : ArrayList<String>
+        - username : String
         + ClientHandler(client : Socket)
         + run() : void
         + sendMessage(messageString : String) : void
+        + getGroups() : ArrayList<String>
+        + getUsername() : String
+        + addGroup(group : String) : void
+        + removeGroup(group : String) : void
     }
 }
 
@@ -35,12 +48,17 @@ package client {
         - {static} receiver : Receiver
         - {static} socket : Socket
         - {static} loginHandler : LoginHandler
+        - {static} connectionChecker : ConnectionChecker
         - {static} user : String
         - {static} encrypter : Encrypter
         - {static} login(username : String, password : String) : boolean
         + {static} register(username : String, password : String) : void
         + {static} connect(username : String, password : String, gui : GUI) : void
-        + {static} send(messageString : String) : void
+        + {static} send(message : Message) : void
+        + {static} send(messageString : String, group : String) : void
+        + {static} leaveGroup(group : String) : void
+        + {static} sendInvite(invitedUser : String, group : String) : void
+        + {static} enterGroup(group : String) : void
         + {static} disconnect() : void
     }
 
@@ -50,9 +68,17 @@ package client {
         - usernameField : JTextField
         - passwordField : JPasswordField
         - loginStatusLabel : JLabel
-        - chatArea : JTextArea
+        - chatArea : JTextPane
         - messageField : JTextField
-        - messages : List<Message>
+        - pendingAttachments : List<Attachment>
+        - attachmentStatusLabel : JLabel
+        - notificationPanel : JPanel
+        - groupManager : GroupManager
+        - chatListPanel : JPanel
+        - chatButtons : HashMap<String, JButton>
+        - userListModel : DefaultListModel<String>
+        - currentChat : String
+        - connectionIndicator : JLabel
         + GUI()
         + GUI(username : String)
         + showChatMessage(message : Message) : void
@@ -66,7 +92,11 @@ package client {
         - handleSend() : void
         - handleLogout() : void
         - handleSaveHistory() : void
-        - handleExit() : void
+        - handleAttachFile() : void
+        - appendToChat(text : String) : void
+        - appendImageToChat(data : byte[]) : void
+        - loadEmojis() : void
+        - getEmojiIcon(name : String, targetHeight : int) : ImageIcon
         - showChatScreen() : void
     }
 
@@ -110,6 +140,10 @@ package client {
         - encrypter : Encrypter
         + Sender(socket : Socket, encrypter : Encrypter)
         + send(message : Message) : void
+        + enter(username : String) : void
+        + enter(username : String, group : String) : void
+        + leave(group : String, username : String) : void
+        + invite(invitedUser : String, group : String, inviter : String) : void
     }
 
     class Receiver {
@@ -127,14 +161,21 @@ package client {
         - content : String
         - timeStamp : LocalDateTime
         - userName : String
-        + Message(content : String, userName : String)
-        + Message(content : String, timeStamp : LocalDateTime, userName : String)
+        - group : String
+        - attachments : List<Attachment>
+        + Message(content : String, userName : String, group : String)
+        + Message(content : String, timeStamp : LocalDateTime, userName : String, group : String)
         + getContent() : String
         + setContent(content : String) : void
         + getTimeStamp() : LocalDateTime
         + setTimeStamp(timeStamp : LocalDateTime) : void
         + getUserName() : String
         + setUserName(userName : String) : void
+        + getGroup() : String
+        + setGroup(group : String) : void
+        + addAttachment(att : Attachment) : void
+        + getAttachments() : List<Attachment>
+        + hasAttachments() : boolean
     }
 
     class AESHelper {
@@ -154,6 +195,18 @@ package Utilities {
         + toMessage(messageString : String) : Message
     }
 
+    class GroupManager {
+        + addGroup(group : String) : void
+        + addUser(group : String, user : String) : void
+        + removeUser(group : String, user : String) : void
+        + hasGroup(group : String) : boolean
+        + ensureGroup(group : String) : void
+        + removeGroup(group : String) : void
+        + getGroupMembers(group : String) : ArrayList<String>
+        + getGroupMessages(group : String) : ArrayList<Message>
+        + addMessage(group : String, message : Message) : void
+    }
+
     class InvalidLoginException {
         + InvalidLoginException(message : String)
     }
@@ -169,7 +222,7 @@ package Utilities {
 App ..> GUI : creates
 
 ' GUI ↔ Client
-GUI ..> Client : calls connect() / send() / disconnect() / register()
+GUI ..> Client : calls connect() / send() / disconnect() / register() / enterGroup()
 
 ' Client orchestrates the session
 Client --> LoginHandler      : uses (singleton)
@@ -185,9 +238,10 @@ LoginHandler ..> RegistrationException  : throws
 CredentialHandler ..> RegistrationException : throws
 
 ' Send path
-Sender --> Encrypter     : encryptMessage()
+GUI -> Client : send(Message)
+Client -> Sender : send(Message)
 Sender --> MessageHelper : fromMessage()
-Sender ..> Message       : receives
+Sender --> Encrypter : encryptMessage()
 
 ' Receive path
 Receiver --> Encrypter     : decryptMessage()
@@ -200,6 +254,6 @@ Encrypter ..> AESHelper : creates & uses
 
 ' Server ↔ ClientHandler
 Server "1" *-- "0..*" ClientHandler : spawns / manages
-ClientHandler ..> Server : broadcast() / disconnectClient()
+ClientHandler ..> Server : broadcast(encryptedString, group) / disconnectClient()
 
 @enduml

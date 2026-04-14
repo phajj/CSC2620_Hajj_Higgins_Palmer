@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import client.Encrypter;
-import client.Message;
 import Utilities.MessageHelper;
 
 /**

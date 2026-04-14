@@ -57,11 +57,12 @@ public class CredentialHandler {
      */
     private void loadCredentials() throws FileNotFoundException {
         creds.clear();
-        Scanner reader = new Scanner(credentialsFile);
-        while (reader.hasNextLine()) {
-            String line = reader.nextLine();
-            String[] credentials = line.split(","); // lines are formatted username,password
-            creds.put(credentials[0], credentials[1]);
+        try (Scanner reader = new Scanner(credentialsFile)) {
+            while (reader.hasNextLine()) {
+                String line = reader.nextLine();
+                String[] credentials = line.split(","); // lines are formatted username,password
+                creds.put(credentials[0], credentials[1]);
+            }
         }
     }
 

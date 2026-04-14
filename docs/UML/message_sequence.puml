@@ -17,11 +17,10 @@ actor Receiver_User as "User B (Receiver)"
 
 ' ── SEND PATH ─────────────────────────────────────────────
 Sender_User -> GUI_A : types message, clicks Send
-GUI_A -> Client_A : send(messageString)
-Client_A -> Client_A : new Message(messageString, user)
+GUI_A -> Client_A : send(message)  -- GUI builds a Message(user, group, content)
 Client_A -> Sender : send(message)
 Sender -> MessageHelper : fromMessage(message)
-MessageHelper --> Sender : serialized string\n"content|timestamp|username"
+MessageHelper --> Sender : serialized string\n"timestamp,username,content,group|{att1}|{att2}"
 Sender -> Encrypter_A : encryptMessage(serializedString)
 Encrypter_A --> Sender : encrypted (Base64 AES)
 Sender -> Server : write encrypted string to socket
@@ -29,8 +28,8 @@ Sender -> Server : write encrypted string to socket
 ' ── SERVER BROADCAST ──────────────────────────────────────
 Server -> ClientHandler : (all connected ClientHandlers\nread from their socket)
 ClientHandler -> ClientHandler : reader.readLine() → encryptedString
-ClientHandler -> Server : broadcast(encryptedString)
-Server -> ClientHandler : sendMessage(encryptedString)\n[for each connected client]
+ClientHandler -> Server : broadcast(encryptedString, group)
+Server -> ClientHandler : sendMessage(encryptedString)\n[for each connected client in group]
 ClientHandler -> Receiver : write encrypted string to socket
 
 ' ── RECEIVE PATH ──────────────────────────────────────────
@@ -38,9 +37,9 @@ Receiver -> Receiver : receiver.readLine() → encryptedString
 Receiver -> Encrypter_B : decryptMessage(encryptedString)
 Encrypter_B --> Receiver : serialized plain string
 Receiver -> MessageHelper : toMessage(serializedString)
-MessageHelper --> Receiver : Message(content, timeStamp, userName)
+MessageHelper --> Receiver : Message(content, timeStamp, userName, group) + attachments
 Receiver -> GUI_B : showChatMessage(message)
-GUI_B -> GUI_B : append to chatArea
+GUI_B -> GUI_B : append to chatArea (render text, inline emojis, attachments)
 GUI_B -> Receiver_User : message displayed
 
 @enduml
