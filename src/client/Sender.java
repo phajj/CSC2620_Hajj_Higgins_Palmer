@@ -84,4 +84,9 @@ public class Sender extends Thread {
     String invite = ":invite," + invitedUser + "," + group + "," + inviter;
     sender.println(encrypter.encryptMessage(invite));
   }
+
+  public void createGroup(String name) {
+    String createGroup = ":createGroup," + name;
+    sender.println(encrypter.encryptMessage(createGroup));
+  }
 }

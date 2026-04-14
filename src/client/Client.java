@@ -147,7 +147,6 @@ public class Client {
   }
 
   public static void createGroup(String name) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'createGroup'");
+    sender.createGroup(name);
   }
 }
