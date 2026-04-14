@@ -29,6 +29,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
+import java.util.prefs.Preferences;
 
 
 /**
@@ -64,6 +65,9 @@ public class GUI extends JFrame {
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final HashMap<String, JButton> chatButtons = new HashMap<>();
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
+  private JList<String> userList;
+  private boolean darkTheme = false;
+  private JToggleButton themeToggle;
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
@@ -95,6 +99,11 @@ public class GUI extends JFrame {
 
     // load emoji images for inline rendering
     loadEmojis();
+
+    // load saved theme preference and apply
+    Preferences prefs = Preferences.userNodeForPackage(GUI.class);
+    darkTheme = prefs.getBoolean("darkTheme", false);
+    applyTheme();
 
     setVisible(true);
   }
@@ -267,7 +276,7 @@ public class GUI extends JFrame {
     panel.add(leftSidebar, BorderLayout.WEST);
 
     // Right sidebar — connected users list
-    JList<String> userList = new JList<>(userListModel);
+    userList = new JList<>(userListModel);
     userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     JScrollPane userListScroll = new JScrollPane(userList);
     userListScroll.setPreferredSize(new Dimension(160, 0));
@@ -312,6 +321,7 @@ public class GUI extends JFrame {
     logoutBtn.addActionListener(e -> handleLogout());
     saveHistoryBtn.addActionListener(e -> handleSaveHistory());
     addAttachment.addActionListener(e -> handleAttachFile());
+    addEmoji.addActionListener(e -> showEmojiPicker(addEmoji));
 
     messageField.addActionListener(e -> handleSend());
 
@@ -328,7 +338,16 @@ public class GUI extends JFrame {
     inviteUserBtn.setVisible(false);
     inviteUserBtn.addActionListener(e -> handleInviteUser());
 
+    themeToggle = new JToggleButton("Dark");
+    themeToggle.setFocusable(false);
+    themeToggle.addActionListener(e -> {
+      darkTheme = themeToggle.isSelected();
+      Preferences.userNodeForPackage(GUI.class).putBoolean("darkTheme", darkTheme);
+      applyTheme();
+    });
+
     JPanel topRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
+    topRightButtons.add(themeToggle);
     topRightButtons.add(inviteUserBtn);
     topRightButtons.add(leaveChatBtn);
 
@@ -823,6 +842,127 @@ public class GUI extends JFrame {
     int w = (int) Math.round(orig.getWidth() * (h / (double) orig.getHeight()));
     Image scaled = orig.getScaledInstance(w, h, Image.SCALE_SMOOTH);
     return new ImageIcon(scaled);
+  }
+
+  /**
+   * Applies the current theme (dark/light) across visible components.
+   */
+  private void applyTheme() {
+    Color panelBg = darkTheme ? new Color(60, 63, 65) : Color.WHITE;
+    Color bg = darkTheme ? new Color(43, 43, 43) : Color.WHITE;
+    Color fg = darkTheme ? new Color(220, 220, 220) : Color.BLACK;
+    Color btnBg = darkTheme ? new Color(75, 78, 80) : new Color(238, 238, 238);
+
+    SwingUtilities.invokeLater(() -> {
+      // apply general coloring recursively to the content pane
+      colorize(this.getContentPane(), panelBg, fg);
+
+      // key components
+      chatArea.setBackground(bg);
+      chatArea.setForeground(fg);
+      chatArea.setCaretColor(fg);
+
+      messageField.setBackground(darkTheme ? new Color(55, 58, 60) : Color.WHITE);
+      messageField.setForeground(fg);
+
+      attachmentStatusLabel.setForeground(fg);
+      notificationPanel.setBackground(panelBg);
+
+      chatListPanel.setBackground(panelBg);
+      if (userList != null) {
+        userList.setBackground(panelBg);
+        userList.setForeground(fg);
+      }
+
+      connectionIndicator.setForeground(darkTheme ? new Color(0, 200, 0) : new Color(160, 0, 0));
+
+      for (JButton b : chatButtons.values()) {
+        b.setBackground(btnBg);
+        b.setForeground(fg);
+        b.setOpaque(true);
+      }
+
+      if (acceptButton != null) { acceptButton.setBackground(btnBg); acceptButton.setForeground(fg); acceptButton.setOpaque(true); }
+      if (declineButton != null) { declineButton.setBackground(btnBg); declineButton.setForeground(fg); declineButton.setOpaque(true); }
+      if (leaveChatBtn != null) { leaveChatBtn.setBackground(btnBg); leaveChatBtn.setForeground(fg); leaveChatBtn.setOpaque(true); }
+      if (inviteUserBtn != null) { inviteUserBtn.setBackground(btnBg); inviteUserBtn.setForeground(fg); inviteUserBtn.setOpaque(true); }
+
+      if (themeToggle != null) { themeToggle.setSelected(darkTheme); themeToggle.setText(darkTheme ? "Dark" : "Light"); themeToggle.setBackground(btnBg); themeToggle.setForeground(fg); themeToggle.setOpaque(true); }
+    });
+  }
+
+  private void colorize(Component comp, Color bg, Color fg) {
+    if (comp instanceof JComponent) {
+      JComponent jc = (JComponent) comp;
+      jc.setBackground(bg);
+      jc.setForeground(fg);
+      if (jc instanceof JScrollPane) {
+        ((JScrollPane) jc).getViewport().setBackground(bg);
+      }
+    }
+    if (comp instanceof Container) {
+      for (Component child : ((Container) comp).getComponents()) {
+        colorize(child, bg, fg);
+      }
+    }
+  }
+
+  /**
+   * Shows a popup emoji picker anchored to the given component.
+   */
+  private void showEmojiPicker(Component invoker) {
+    JPopupMenu popup = new JPopupMenu();
+    JPanel grid = new JPanel();
+    int cols = 8;
+    grid.setLayout(new GridLayout(0, cols, 4, 4));
+
+    int iconSize = 28;
+    if (!emojiImages.isEmpty()) {
+      for (String name : emojiImages.keySet()) {
+        ImageIcon icon = getEmojiIcon(name, iconSize);
+        JButton btn = new JButton(icon);
+        btn.setPreferredSize(new Dimension(iconSize + 6, iconSize + 6));
+        btn.setBorder(BorderFactory.createEmptyBorder());
+        btn.setContentAreaFilled(false);
+        btn.addActionListener(e -> {
+          String token = ":" + name + ":";
+          int pos = messageField.getCaretPosition();
+          String text = messageField.getText();
+          if (pos < 0) pos = text.length();
+          String newText = text.substring(0, Math.max(0, pos)) + token + text.substring(Math.max(0, pos));
+          messageField.setText(newText);
+          messageField.requestFocusInWindow();
+          messageField.setCaretPosition(pos + token.length());
+          popup.setVisible(false);
+        });
+        grid.add(btn);
+      }
+    } else {
+      String[] fallback = new String[] { "\uD83D\uDE00", "\uD83D\uDE03", "\uD83D\uDE04", "\uD83D\uDE01", "\uD83D\uDE06", "\uD83D\uDE0A", "\uD83D\uDE42", "\uD83D\uDE09", "\uD83D\uDE0D", "\uD83D\uDE18" };
+      for (String emoji : fallback) {
+        JButton btn = new JButton(emoji);
+        btn.setFont(btn.getFont().deriveFont(18f));
+        btn.setBorder(BorderFactory.createEmptyBorder());
+        btn.setContentAreaFilled(false);
+        btn.addActionListener(e -> {
+          int pos = messageField.getCaretPosition();
+          String text = messageField.getText();
+          if (pos < 0) pos = text.length();
+          String newText = text.substring(0, Math.max(0, pos)) + emoji + text.substring(Math.max(0, pos));
+          messageField.setText(newText);
+          messageField.requestFocusInWindow();
+          messageField.setCaretPosition(pos + emoji.length());
+          popup.setVisible(false);
+        });
+        grid.add(btn);
+      }
+    }
+
+    JScrollPane scroller = new JScrollPane(grid);
+    scroller.setBorder(BorderFactory.createEmptyBorder());
+    scroller.setPreferredSize(new Dimension(320, 200));
+    popup.add(scroller);
+    popup.show(invoker, 0, invoker.getHeight());
   }
 
   /**
