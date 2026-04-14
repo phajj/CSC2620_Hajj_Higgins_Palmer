@@ -32,6 +32,9 @@ group Login
             LoginHandler --> Client : true
             Client -> Client : open socket, start Sender and Receiver
             Client --> GUI : (returns normally)
+               Client -> Sender : enter(username)
+               Client -> Client : connectionChecker = new ConnectionChecker(sender, gui)
+               Client -> Client : connectionChecker.start()
             GUI -> GUI : showChatScreen()
             GUI -> User : chat screen shown
         else No match / user not found
