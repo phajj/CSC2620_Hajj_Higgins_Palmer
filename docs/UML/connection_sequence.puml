@@ -34,6 +34,9 @@ alt Credentials valid
     Client -> Client : new Receiver(socket, encrypter, gui)
     Client -> Client : sender.start()
     Client -> Client : receiver.start()
+    Client -> Sender : enter(username)  
+    Client -> Client : connectionChecker = new ConnectionChecker(sender, gui)
+    Client -> Client : connectionChecker.start()
 
     Client --> GUI : (returns normally)
     GUI -> GUI : showChatScreen()
