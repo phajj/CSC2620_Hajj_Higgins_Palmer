@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
 import javax.imageio.ImageIO;
 
 import java.awt.*;
@@ -19,6 +21,8 @@ import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +56,10 @@ public class GUI extends JFrame {
   private final JLabel attachmentStatusLabel = new JLabel(" ");
   private final JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
   private final GroupManager groupManager = new GroupManager();
+  // emoji name -> original image
+  private final HashMap<String, BufferedImage> emojiImages = new HashMap<>();
+  // pattern to match :emoji-name: tokens (allows letters, numbers, underscores and hyphens)
+  private final Pattern emojiPattern = Pattern.compile(":(\\w[\\w-]*):");
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final HashMap<String, JButton> chatButtons = new HashMap<>();
@@ -84,6 +92,9 @@ public class GUI extends JFrame {
 
     setContentPane(cardPanel);
     cardLayout.show(cardPanel, "login");
+
+    // load emoji images for inline rendering
+    loadEmojis();
 
     setVisible(true);
   }
@@ -740,11 +751,78 @@ public class GUI extends JFrame {
   private void appendToChat(String text) {
     StyledDocument doc = chatArea.getStyledDocument();
     try {
-      doc.insertString(doc.getLength(), text, null);
+      // parse text for :emojiName: tokens and render images inline
+      Matcher matcher = emojiPattern.matcher(text);
+      int last = 0;
+      while (matcher.find()) {
+        String before = text.substring(last, matcher.start());
+        if (!before.isEmpty()) {
+          doc.insertString(doc.getLength(), before, null);
+        }
+
+        String emojiName = matcher.group(1);
+        // compute target height using font metrics so emoji lines up with baseline
+        FontMetrics fm = chatArea.getFontMetrics(chatArea.getFont());
+        int emojiHeight = Math.max(8, fm.getAscent() + 2);
+        ImageIcon icon = getEmojiIcon(emojiName, emojiHeight);
+        if (icon != null) {
+          SimpleAttributeSet attrs = new SimpleAttributeSet();
+          StyleConstants.setIcon(attrs, icon);
+          // insert object-replacement char with icon attributes so it aligns with text
+          doc.insertString(doc.getLength(), "\uFFFC", attrs);
+        } else {
+          // unknown emoji token - leave text unchanged
+          doc.insertString(doc.getLength(), matcher.group(), null);
+        }
+
+        last = matcher.end();
+      }
+
+      // append remaining text after last emoji
+      if (last < text.length()) {
+        doc.insertString(doc.getLength(), text.substring(last), null);
+      }
     } catch (BadLocationException e) {
       e.printStackTrace();
     }
     chatArea.setCaretPosition(doc.getLength());
+  }
+
+  /**
+   * Loads available emoji images from resources/emojis into memory.
+   */
+  private void loadEmojis() {
+    File dir = new File("resources/emojis");
+    if (!dir.exists() || !dir.isDirectory()) return;
+    File[] files = dir.listFiles((d, n) -> {
+      String lower = n.toLowerCase();
+      return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif");
+    });
+    if (files == null) return;
+    for (File f : files) {
+      try {
+        BufferedImage img = ImageIO.read(f);
+        if (img != null) {
+          String name = f.getName();
+          int idx = name.lastIndexOf('.');
+          if (idx > 0) name = name.substring(0, idx);
+          emojiImages.put(name, img);
+        }
+      } catch (IOException ignored) {
+      }
+    }
+  }
+
+  /**
+   * Returns an ImageIcon scaled to the requested height maintaining aspect ratio.
+   */
+  private ImageIcon getEmojiIcon(String name, int targetHeight) {
+    BufferedImage orig = emojiImages.get(name);
+    if (orig == null) return null;
+    int h = Math.max(8, targetHeight);
+    int w = (int) Math.round(orig.getWidth() * (h / (double) orig.getHeight()));
+    Image scaled = orig.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+    return new ImageIcon(scaled);
   }
 
   /**
