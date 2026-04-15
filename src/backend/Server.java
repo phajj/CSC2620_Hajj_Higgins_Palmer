@@ -117,20 +117,19 @@ public class Server {
   public static void main(String[] args) throws IOException {
     ArrayList<ClientHandler> defaultList = new ArrayList<>();
     broadcastGroups.put(DEFAULTGROUP, defaultList);
-    try (ServerSocket serverSocket = new ServerSocket(PORT)) { // Start server
-      System.out.println("Server starting on port " + PORT);
+    ServerSocket serverSocket = new ServerSocket(PORT); // Start server
+    System.out.println("Server starting on port " + PORT);
 
-      // Loop accepts client connections and spins up a new thread for each as they
-      // connect
-      while (true) {
-        Socket client = serverSocket.accept();
-        System.out.println(client.getInetAddress() + " connected.");
-        ClientHandler handler = new ClientHandler(client);
-        handler.addGroup(DEFAULTGROUP);
-        broadcastGroups.get(DEFAULTGROUP).add(handler); // Add newly connected client to default broadcast group
-        handler.start(); // Creates new thread with the socket freeing this main thread to accept another
-                         // connection.
-      }
+    // Loop accepts client connections and spins up a new thread for each as they
+    // connect
+    while (true) {
+      Socket client = serverSocket.accept();
+      System.out.println(client.getInetAddress() + " connected.");
+      ClientHandler handler = new ClientHandler(client);
+      handler.addGroup(DEFAULTGROUP);
+      broadcastGroups.get(DEFAULTGROUP).add(handler); // Add newly connected client to default broadcast group
+      handler.start(); // Creates new thread with the socket freeing this main thread to accept another
+                       // connection.
     }
   }
 }
