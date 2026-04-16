@@ -64,6 +64,14 @@ public class GUI extends JFrame {
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final HashMap<String, JButton> chatButtons = new HashMap<>();
+
+  // Borders for sidebar chat buttons.
+  private static final javax.swing.border.Border CHAT_BTN_BORDER = BorderFactory.createCompoundBorder(
+      BorderFactory.createLineBorder(new Color(0, 90, 170), 1, true),
+      BorderFactory.createEmptyBorder(5, 10, 5, 10));
+  private static final javax.swing.border.Border CHAT_BTN_BORDER_SELECTED = BorderFactory.createCompoundBorder(
+      BorderFactory.createLineBorder(Color.WHITE, 2, true),
+      BorderFactory.createEmptyBorder(4, 9, 4, 9));
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
   private JList<String> userList;
   private boolean darkTheme = false;
@@ -71,6 +79,10 @@ public class GUI extends JFrame {
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
+  // Tracks actual connection state so applyTheme() can restore the correct color.
+  private boolean isConnected = false;
+  private JButton addEmoji;
+  private JButton addAttachment;
 
   // Notification panel components:
   private final JLabel invitationTextLabel = new JLabel();
@@ -234,16 +246,19 @@ public class GUI extends JFrame {
    */
   private JPanel buildChatPanel() {
     JPanel panel = new JPanel(new BorderLayout());
-    JButton addEmoji = new JButton("");
-    JButton addAttachment = new JButton("");
+    // Assign to fields so applyTheme() can re-apply background after colorize().
+    addEmoji = new JButton("");
+    addAttachment = new JButton("");
 
-    // Add icons to emoji and attachment buttons
+    // Add icons to emoji and attachment buttons.
     ImageIcon emojiIcon = new ImageIcon(
         new ImageIcon("resources/happy-face.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
     addEmoji.setIcon(emojiIcon);
     addEmoji.setBackground(Color.WHITE);
     addEmoji.setBorder(BorderFactory.createEmptyBorder());
     addEmoji.setContentAreaFilled(false);
+    addEmoji.setBorderPainted(false);
+    addEmoji.setFocusPainted(false);
     addEmoji.setOpaque(true);
     addEmoji.setRolloverEnabled(false);
 
@@ -253,6 +268,8 @@ public class GUI extends JFrame {
     addAttachment.setBackground(Color.WHITE);
     addAttachment.setBorder(BorderFactory.createEmptyBorder());
     addAttachment.setContentAreaFilled(false);
+    addAttachment.setBorderPainted(false);
+    addAttachment.setFocusPainted(false);
     addAttachment.setOpaque(true);
     addAttachment.setRolloverEnabled(false);
 
@@ -578,12 +595,16 @@ public class GUI extends JFrame {
    * @param connected true if connected to the server, false otherwise
    */
   public void setConnected(boolean connected) {
+    // Store state so applyTheme() can restore the correct color after a theme switch.
+    isConnected = connected;
     if (connected) {
       connectionIndicator.setText("\u25CF Connected");
-      connectionIndicator.setForeground(new Color(0, 128, 0));
+      // Force green regardless of theme or L&F defaults.
+      connectionIndicator.setForeground(new Color(0, 160, 0));
     } else {
       connectionIndicator.setText("\u25CF Disconnected");
-      connectionIndicator.setForeground(new Color(160, 0, 0));
+      // Force red regardless of theme or L&F defaults.
+      connectionIndicator.setForeground(new Color(180, 0, 0));
     }
   }
 
@@ -647,10 +668,16 @@ public class GUI extends JFrame {
    */
   public void addChat(String chatName) {
     JButton chatBtn = chatBtnFactory.getButton(chatName);
+    // Apply the selected border if this chat is already active (e.g. "default" on login),
+    // otherwise use the standard idle border. Both borders occupy the same total space so
+    // toggling between them never causes the button to resize.
+    chatBtn.setBorder(chatName.equals(currentChat) ? CHAT_BTN_BORDER_SELECTED : CHAT_BTN_BORDER);
     chatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatBtn.getPreferredSize().height));
     chatBtn.addActionListener(e -> openChat(chatName));
     chatButtons.put(chatName, chatBtn);
     chatListPanel.add(chatBtn);
+    // Small gap between chat entries for visual separation.
+    chatListPanel.add(Box.createRigidArea(new Dimension(0, 4)));
     chatListPanel.revalidate();
     chatListPanel.repaint();
   }
@@ -663,6 +690,11 @@ public class GUI extends JFrame {
    */
   private void openChat(String chatName) {
     currentChat = chatName;
+    // Reset all chat buttons to the idle border, then highlight the active one.
+    for (JButton b : chatButtons.values()) b.setBorder(CHAT_BTN_BORDER);
+    JButton active = chatButtons.get(chatName);
+    if (active != null) active.setBorder(CHAT_BTN_BORDER_SELECTED);
+
     boolean nonDefault = !chatName.equals("default");
     leaveChatBtn.setVisible(nonDefault);
     inviteUserBtn.setVisible(nonDefault);
@@ -874,24 +906,24 @@ public class GUI extends JFrame {
         userList.setForeground(fg);
       }
 
-      connectionIndicator.setForeground(darkTheme ? new Color(0, 200, 0) : new Color(160, 0, 0));
+      // Re-apply the correct indicator color after colorize() has swept every component.
+      // setConnected() is the single source of truth — never derive the color from the theme.
+      setConnected(isConnected);
 
-      for (JButton b : chatButtons.values()) {
-        b.setBackground(btnBg);
-        b.setForeground(fg);
-        b.setOpaque(true);
-      }
-
-      if (acceptButton != null) { acceptButton.setBackground(btnBg); acceptButton.setForeground(fg); acceptButton.setOpaque(true); }
-      if (declineButton != null) { declineButton.setBackground(btnBg); declineButton.setForeground(fg); declineButton.setOpaque(true); }
-      if (leaveChatBtn != null) { leaveChatBtn.setBackground(btnBg); leaveChatBtn.setForeground(fg); leaveChatBtn.setOpaque(true); }
-      if (inviteUserBtn != null) { inviteUserBtn.setBackground(btnBg); inviteUserBtn.setForeground(fg); inviteUserBtn.setOpaque(true); }
-
-      if (themeToggle != null) { themeToggle.setSelected(darkTheme); themeToggle.setText(darkTheme ? "Dark" : "Light"); themeToggle.setBackground(btnBg); themeToggle.setForeground(fg); themeToggle.setOpaque(true); }
+      // Re-apply icon button backgrounds after colorize() overwrites them.
+      // contentAreaFilled=false means the component's own background color is what shows;
+      // we match it to panelBg so the buttons blend with the toolbar in both themes.
+      if (addEmoji != null)      { addEmoji.setBackground(panelBg);      addEmoji.setOpaque(true); }
+      if (addAttachment != null) { addAttachment.setBackground(panelBg); addAttachment.setOpaque(true); }
+      // Use the opposite theme's colors so the button previews what clicking it will do.
+      Color toggleBg = darkTheme ? new Color(238, 238, 238) : new Color(75, 78, 80);
+      Color toggleFg = darkTheme ? Color.BLACK           : new Color(220, 220, 220);
+      if (themeToggle != null) { themeToggle.setSelected(darkTheme); themeToggle.setText(darkTheme ? "Dark" : "Light"); themeToggle.setBackground(toggleBg); themeToggle.setForeground(toggleFg); themeToggle.setOpaque(true); }
     });
   }
 
   private void colorize(Component comp, Color bg, Color fg) {
+    if (comp instanceof JButton) return;
     if (comp instanceof JComponent) {
       JComponent jc = (JComponent) comp;
       jc.setBackground(bg);
