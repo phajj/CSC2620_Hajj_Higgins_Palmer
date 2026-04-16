@@ -751,9 +751,11 @@ public class GUI extends JFrame {
     if (result == JOptionPane.OK_OPTION) {
       String name = chatName.getText().trim();
       if (!name.isEmpty()) {
-        Client.createGroup(name);
-        addChat(name);
-        openChat(name);
+        groupManager.addGroup(name);
+        Client.createGroup(name);     
+        addChat(name);              
+        openChat(name);               
+        Client.enterGroup(name);
       }
     }
   }

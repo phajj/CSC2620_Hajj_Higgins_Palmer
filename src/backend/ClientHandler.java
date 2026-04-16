@@ -70,6 +70,17 @@ public class ClientHandler extends Thread {
           removeGroup(group);
         } else if (decryptedMessage.startsWith(":invite,")) {
           Server.broadcast(messageString, "default");
+        } else if (decryptedMessage.startsWith(":createGroup,")) {
+          // Create the named group on the server. Without this handler the message
+          // falls through to toMessage(), which throws ArrayIndexOutOfBoundsException
+          // and crashes this handler thread — closing the socket and disconnecting
+          // the client.
+          String[] parts = decryptedMessage.split(",", 2);
+          if (parts.length == 2 && !parts[1].trim().isEmpty()) {
+            String groupName = parts[1].trim();
+            Server.createGroup(groupName);
+            System.out.println("Group '" + groupName + "' created by " + username);
+          }
         } else if (decryptedMessage.startsWith(":enter,")) {
           String[] parts = decryptedMessage.split(",");
           String enteredUsername = parts[1];
