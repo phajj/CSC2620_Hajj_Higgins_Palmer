@@ -9,17 +9,20 @@ class GUI {
   Collect credentials and delegate login to Client
   Collect credentials and delegate registration to Client
   Delegate outbound text messages to Client
-  Render incoming Message objects in the chat area
+  Render incoming Message objects in the chat area, including inline emojis and attachments
   Show error and success status messages to the user
   Switch between login and chat screens via CardLayout
   Disconnect the client and return to the login screen on logout
   Save the chat history to a timestamped text file
+  Support file attachments and manage per-chat history via GroupManager
   --
   == Collaborators ==
   Client
   Message
   InvalidLoginException
   RegistrationException
+  Attachment
+  GroupManager
 }
 
 class Client {

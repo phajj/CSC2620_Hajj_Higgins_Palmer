@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
 import javax.imageio.ImageIO;
 
 import java.awt.*;
@@ -19,12 +21,15 @@ import java.io.IOException;
 import java.io.FileWriter;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.net.UnknownHostException;
+import java.util.prefs.Preferences;
 
 
 /**
@@ -52,13 +57,32 @@ public class GUI extends JFrame {
   private final JLabel attachmentStatusLabel = new JLabel(" ");
   private final JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
   private final GroupManager groupManager = new GroupManager();
+  // emoji name -> original image
+  private final HashMap<String, BufferedImage> emojiImages = new HashMap<>();
+  // pattern to match :emoji-name: tokens (allows letters, numbers, underscores and hyphens)
+  private final Pattern emojiPattern = Pattern.compile(":(\\w[\\w-]*):");
   // Sidebar components (populate these when backend is ready):
   private final JPanel chatListPanel = new JPanel(); // holds chat buttons
   private final HashMap<String, JButton> chatButtons = new HashMap<>();
+
+  // Borders for sidebar chat buttons.
+  private static final javax.swing.border.Border CHAT_BTN_BORDER = BorderFactory.createCompoundBorder(
+      BorderFactory.createLineBorder(new Color(0, 90, 170), 1, true),
+      BorderFactory.createEmptyBorder(5, 10, 5, 10));
+  private static final javax.swing.border.Border CHAT_BTN_BORDER_SELECTED = BorderFactory.createCompoundBorder(
+      BorderFactory.createLineBorder(Color.WHITE, 2, true),
+      BorderFactory.createEmptyBorder(4, 9, 4, 9));
   private final DefaultListModel<String> userListModel = new DefaultListModel<>();
+  private JList<String> userList;
+  private boolean darkTheme = false;
+  private JToggleButton themeToggle;
   private String currentChat = "default";
   // Connection indicator:
   private final JLabel connectionIndicator = new JLabel("\u25CF Disconnected");
+  // Tracks actual connection state so applyTheme() can restore the correct color.
+  private boolean isConnected = false;
+  private JButton addEmoji;
+  private JButton addAttachment;
 
   // Notification panel components:
   private final JLabel invitationTextLabel = new JLabel();
@@ -84,6 +108,14 @@ public class GUI extends JFrame {
 
     setContentPane(cardPanel);
     cardLayout.show(cardPanel, "login");
+
+    // load emoji images for inline rendering
+    loadEmojis();
+
+    // load saved theme preference and apply
+    Preferences prefs = Preferences.userNodeForPackage(GUI.class);
+    darkTheme = prefs.getBoolean("darkTheme", false);
+    applyTheme();
 
     setVisible(true);
   }
@@ -214,16 +246,19 @@ public class GUI extends JFrame {
    */
   private JPanel buildChatPanel() {
     JPanel panel = new JPanel(new BorderLayout());
-    JButton addEmoji = new JButton("");
-    JButton addAttachment = new JButton("");
+    // Assign to fields so applyTheme() can re-apply background after colorize().
+    addEmoji = new JButton("");
+    addAttachment = new JButton("");
 
-    // Add icons to emoji and attachment buttons
+    // Add icons to emoji and attachment buttons.
     ImageIcon emojiIcon = new ImageIcon(
         new ImageIcon("resources/happy-face.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
     addEmoji.setIcon(emojiIcon);
     addEmoji.setBackground(Color.WHITE);
     addEmoji.setBorder(BorderFactory.createEmptyBorder());
     addEmoji.setContentAreaFilled(false);
+    addEmoji.setBorderPainted(false);
+    addEmoji.setFocusPainted(false);
     addEmoji.setOpaque(true);
     addEmoji.setRolloverEnabled(false);
 
@@ -233,6 +268,8 @@ public class GUI extends JFrame {
     addAttachment.setBackground(Color.WHITE);
     addAttachment.setBorder(BorderFactory.createEmptyBorder());
     addAttachment.setContentAreaFilled(false);
+    addAttachment.setBorderPainted(false);
+    addAttachment.setFocusPainted(false);
     addAttachment.setOpaque(true);
     addAttachment.setRolloverEnabled(false);
 
@@ -256,7 +293,7 @@ public class GUI extends JFrame {
     panel.add(leftSidebar, BorderLayout.WEST);
 
     // Right sidebar — connected users list
-    JList<String> userList = new JList<>(userListModel);
+    userList = new JList<>(userListModel);
     userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     JScrollPane userListScroll = new JScrollPane(userList);
     userListScroll.setPreferredSize(new Dimension(160, 0));
@@ -301,6 +338,7 @@ public class GUI extends JFrame {
     logoutBtn.addActionListener(e -> handleLogout());
     saveHistoryBtn.addActionListener(e -> handleSaveHistory());
     addAttachment.addActionListener(e -> handleAttachFile());
+    addEmoji.addActionListener(e -> showEmojiPicker(addEmoji));
 
     messageField.addActionListener(e -> handleSend());
 
@@ -317,7 +355,16 @@ public class GUI extends JFrame {
     inviteUserBtn.setVisible(false);
     inviteUserBtn.addActionListener(e -> handleInviteUser());
 
+    themeToggle = new JToggleButton("Dark");
+    themeToggle.setFocusable(false);
+    themeToggle.addActionListener(e -> {
+      darkTheme = themeToggle.isSelected();
+      Preferences.userNodeForPackage(GUI.class).putBoolean("darkTheme", darkTheme);
+      applyTheme();
+    });
+
     JPanel topRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
+    topRightButtons.add(themeToggle);
     topRightButtons.add(inviteUserBtn);
     topRightButtons.add(leaveChatBtn);
 
@@ -548,12 +595,16 @@ public class GUI extends JFrame {
    * @param connected true if connected to the server, false otherwise
    */
   public void setConnected(boolean connected) {
+    // Store state so applyTheme() can restore the correct color after a theme switch.
+    isConnected = connected;
     if (connected) {
       connectionIndicator.setText("\u25CF Connected");
-      connectionIndicator.setForeground(new Color(0, 128, 0));
+      // Force green regardless of theme or L&F defaults.
+      connectionIndicator.setForeground(new Color(0, 160, 0));
     } else {
       connectionIndicator.setText("\u25CF Disconnected");
-      connectionIndicator.setForeground(new Color(160, 0, 0));
+      // Force red regardless of theme or L&F defaults.
+      connectionIndicator.setForeground(new Color(180, 0, 0));
     }
   }
 
@@ -617,10 +668,16 @@ public class GUI extends JFrame {
    */
   public void addChat(String chatName) {
     JButton chatBtn = chatBtnFactory.getButton(chatName);
+    // Apply the selected border if this chat is already active (e.g. "default" on login),
+    // otherwise use the standard idle border. Both borders occupy the same total space so
+    // toggling between them never causes the button to resize.
+    chatBtn.setBorder(chatName.equals(currentChat) ? CHAT_BTN_BORDER_SELECTED : CHAT_BTN_BORDER);
     chatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatBtn.getPreferredSize().height));
     chatBtn.addActionListener(e -> openChat(chatName));
     chatButtons.put(chatName, chatBtn);
     chatListPanel.add(chatBtn);
+    // Small gap between chat entries for visual separation.
+    chatListPanel.add(Box.createRigidArea(new Dimension(0, 4)));
     chatListPanel.revalidate();
     chatListPanel.repaint();
   }
@@ -633,6 +690,11 @@ public class GUI extends JFrame {
    */
   private void openChat(String chatName) {
     currentChat = chatName;
+    // Reset all chat buttons to the idle border, then highlight the active one.
+    for (JButton b : chatButtons.values()) b.setBorder(CHAT_BTN_BORDER);
+    JButton active = chatButtons.get(chatName);
+    if (active != null) active.setBorder(CHAT_BTN_BORDER_SELECTED);
+
     boolean nonDefault = !chatName.equals("default");
     leaveChatBtn.setVisible(nonDefault);
     inviteUserBtn.setVisible(nonDefault);
@@ -734,11 +796,199 @@ public class GUI extends JFrame {
   private void appendToChat(String text) {
     StyledDocument doc = chatArea.getStyledDocument();
     try {
-      doc.insertString(doc.getLength(), text, null);
+      // parse text for :emojiName: tokens and render images inline
+      Matcher matcher = emojiPattern.matcher(text);
+      int last = 0;
+      while (matcher.find()) {
+        String before = text.substring(last, matcher.start());
+        if (!before.isEmpty()) {
+          doc.insertString(doc.getLength(), before, null);
+        }
+
+        String emojiName = matcher.group(1);
+        // compute target height using font metrics so emoji lines up with baseline
+        FontMetrics fm = chatArea.getFontMetrics(chatArea.getFont());
+        int emojiHeight = Math.max(8, fm.getAscent() + 2);
+        ImageIcon icon = getEmojiIcon(emojiName, emojiHeight);
+        if (icon != null) {
+          SimpleAttributeSet attrs = new SimpleAttributeSet();
+          StyleConstants.setIcon(attrs, icon);
+          // insert object-replacement char with icon attributes so it aligns with text
+          doc.insertString(doc.getLength(), "\uFFFC", attrs);
+        } else {
+          // unknown emoji token - leave text unchanged
+          doc.insertString(doc.getLength(), matcher.group(), null);
+        }
+
+        last = matcher.end();
+      }
+
+      // append remaining text after last emoji
+      if (last < text.length()) {
+        doc.insertString(doc.getLength(), text.substring(last), null);
+      }
     } catch (BadLocationException e) {
       e.printStackTrace();
     }
     chatArea.setCaretPosition(doc.getLength());
+  }
+
+  /**
+   * Loads available emoji images from resources/emojis into memory.
+   */
+  private void loadEmojis() {
+    File dir = new File("resources/emojis");
+    if (!dir.exists() || !dir.isDirectory()) return;
+    File[] files = dir.listFiles((d, n) -> {
+      String lower = n.toLowerCase();
+      return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif");
+    });
+    if (files == null) return;
+    for (File f : files) {
+      try {
+        BufferedImage img = ImageIO.read(f);
+        if (img != null) {
+          String name = f.getName();
+          int idx = name.lastIndexOf('.');
+          if (idx > 0) name = name.substring(0, idx);
+          emojiImages.put(name, img);
+        }
+      } catch (IOException ignored) {
+      }
+    }
+  }
+
+  /**
+   * Returns an ImageIcon scaled to the requested height maintaining aspect ratio.
+   */
+  private ImageIcon getEmojiIcon(String name, int targetHeight) {
+    BufferedImage orig = emojiImages.get(name);
+    if (orig == null) return null;
+    int h = Math.max(8, targetHeight);
+    int w = (int) Math.round(orig.getWidth() * (h / (double) orig.getHeight()));
+    Image scaled = orig.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+    return new ImageIcon(scaled);
+  }
+
+  /**
+   * Applies the current theme (dark/light) across visible components.
+   */
+  private void applyTheme() {
+    Color panelBg = darkTheme ? new Color(60, 63, 65) : Color.WHITE;
+    Color bg = darkTheme ? new Color(43, 43, 43) : Color.WHITE;
+    Color fg = darkTheme ? new Color(220, 220, 220) : Color.BLACK;
+    Color btnBg = darkTheme ? new Color(75, 78, 80) : new Color(238, 238, 238);
+
+    SwingUtilities.invokeLater(() -> {
+      // apply general coloring recursively to the content pane
+      colorize(this.getContentPane(), panelBg, fg);
+
+      // key components
+      chatArea.setBackground(bg);
+      chatArea.setForeground(fg);
+      chatArea.setCaretColor(fg);
+
+      messageField.setBackground(darkTheme ? new Color(55, 58, 60) : Color.WHITE);
+      messageField.setForeground(fg);
+
+      attachmentStatusLabel.setForeground(fg);
+      notificationPanel.setBackground(panelBg);
+
+      chatListPanel.setBackground(panelBg);
+      if (userList != null) {
+        userList.setBackground(panelBg);
+        userList.setForeground(fg);
+      }
+
+      // Re-apply the correct indicator color after colorize() has swept every component.
+      // setConnected() is the single source of truth — never derive the color from the theme.
+      setConnected(isConnected);
+
+      // Re-apply icon button backgrounds after colorize() overwrites them.
+      // contentAreaFilled=false means the component's own background color is what shows;
+      // we match it to panelBg so the buttons blend with the toolbar in both themes.
+      if (addEmoji != null)      { addEmoji.setBackground(panelBg);      addEmoji.setOpaque(true); }
+      if (addAttachment != null) { addAttachment.setBackground(panelBg); addAttachment.setOpaque(true); }
+      // Use the opposite theme's colors so the button previews what clicking it will do.
+      Color toggleBg = darkTheme ? new Color(238, 238, 238) : new Color(75, 78, 80);
+      Color toggleFg = darkTheme ? Color.BLACK           : new Color(220, 220, 220);
+      if (themeToggle != null) { themeToggle.setSelected(darkTheme); themeToggle.setText(darkTheme ? "Dark" : "Light"); themeToggle.setBackground(toggleBg); themeToggle.setForeground(toggleFg); themeToggle.setOpaque(true); }
+    });
+  }
+
+  private void colorize(Component comp, Color bg, Color fg) {
+    if (comp instanceof JButton) return;
+    if (comp instanceof JComponent) {
+      JComponent jc = (JComponent) comp;
+      jc.setBackground(bg);
+      jc.setForeground(fg);
+      if (jc instanceof JScrollPane) {
+        ((JScrollPane) jc).getViewport().setBackground(bg);
+      }
+    }
+    if (comp instanceof Container) {
+      for (Component child : ((Container) comp).getComponents()) {
+        colorize(child, bg, fg);
+      }
+    }
+  }
+
+  /**
+   * Shows a popup emoji picker anchored to the given component.
+   */
+  private void showEmojiPicker(Component invoker) {
+    JPopupMenu popup = new JPopupMenu();
+    JPanel grid = new JPanel();
+    int cols = 8;
+    grid.setLayout(new GridLayout(0, cols, 4, 4));
+
+    int iconSize = 28;
+    if (!emojiImages.isEmpty()) {
+      for (String name : emojiImages.keySet()) {
+        ImageIcon icon = getEmojiIcon(name, iconSize);
+        JButton btn = new JButton(icon);
+        btn.setPreferredSize(new Dimension(iconSize + 6, iconSize + 6));
+        btn.setBorder(BorderFactory.createEmptyBorder());
+        btn.setContentAreaFilled(false);
+        btn.addActionListener(e -> {
+          String token = ":" + name + ":";
+          int pos = messageField.getCaretPosition();
+          String text = messageField.getText();
+          if (pos < 0) pos = text.length();
+          String newText = text.substring(0, Math.max(0, pos)) + token + text.substring(Math.max(0, pos));
+          messageField.setText(newText);
+          messageField.requestFocusInWindow();
+          messageField.setCaretPosition(pos + token.length());
+          popup.setVisible(false);
+        });
+        grid.add(btn);
+      }
+    } else {
+      String[] fallback = new String[] { "\uD83D\uDE00", "\uD83D\uDE03", "\uD83D\uDE04", "\uD83D\uDE01", "\uD83D\uDE06", "\uD83D\uDE0A", "\uD83D\uDE42", "\uD83D\uDE09", "\uD83D\uDE0D", "\uD83D\uDE18" };
+      for (String emoji : fallback) {
+        JButton btn = new JButton(emoji);
+        btn.setFont(btn.getFont().deriveFont(18f));
+        btn.setBorder(BorderFactory.createEmptyBorder());
+        btn.setContentAreaFilled(false);
+        btn.addActionListener(e -> {
+          int pos = messageField.getCaretPosition();
+          String text = messageField.getText();
+          if (pos < 0) pos = text.length();
+          String newText = text.substring(0, Math.max(0, pos)) + emoji + text.substring(Math.max(0, pos));
+          messageField.setText(newText);
+          messageField.requestFocusInWindow();
+          messageField.setCaretPosition(pos + emoji.length());
+          popup.setVisible(false);
+        });
+        grid.add(btn);
+      }
+    }
+
+    JScrollPane scroller = new JScrollPane(grid);
+    scroller.setBorder(BorderFactory.createEmptyBorder());
+    scroller.setPreferredSize(new Dimension(320, 200));
+    popup.add(scroller);
+    popup.show(invoker, 0, invoker.getHeight());
   }
 
   /**

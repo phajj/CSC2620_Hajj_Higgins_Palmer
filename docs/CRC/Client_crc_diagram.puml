@@ -10,7 +10,7 @@ class Client {
   Authenticate the user through LoginHandler
   Register new user accounts through LoginHandler
   Create and start Sender and Receiver threads
-  Wrap outbound text in a Message and pass to Sender
+  Wrap outbound text in a Message (includes group and attachments) and pass to Sender
   Close the socket on disconnect
   --
   == Collaborators ==
@@ -19,6 +19,7 @@ class Client {
   Sender
   Receiver
   GUI
+  ConnectionChecker
 }
 
 class LoginHandler {
@@ -41,6 +42,7 @@ Client --> LoginHandler : authenticates / registers via >
 Client --> Encrypter    : creates >
 Client --> Sender       : creates & starts >
 Client --> Receiver     : creates & starts >
-Client <.. GUI          : calls connect(), send(), disconnect() >
+Client --> ConnectionChecker : creates & starts (pings) >
+Client <.. GUI          : calls connect(), send(Message), send(text, group), disconnect(), enterGroup(), leaveGroup(), sendInvite() >
 
 @enduml

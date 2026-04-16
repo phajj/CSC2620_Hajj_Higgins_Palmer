@@ -6,12 +6,14 @@ class Server {
   == Responsibilities ==
   Listen for incoming TCP connections on port 5001
   Spawn a ClientHandler thread per accepted connection
-  Maintain the list of all currently connected clients
-  Broadcast a message to every connected client
-  Remove a client from the list upon disconnect
+  Maintain broadcast groups and map of clients per-group
+  Ensure groups exist and add/remove clients from groups on demand
+  Broadcast a message to every connected client in a group
+  Remove a client from its groups upon disconnect
   --
   == Collaborators ==
   ClientHandler
+  GroupManager
 }
 
 class ClientHandler {
